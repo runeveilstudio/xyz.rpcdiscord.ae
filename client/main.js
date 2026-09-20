@@ -1,5 +1,5 @@
 /**
- * After Effects Discord Rich Presence (Client Engine)
+ * After Effects Discord Rich Presence (Studio Client Engine)
  *
  * Developed by Jadenaep | Runeveil Studio
  * Free & Open Source for the community
@@ -7,6 +7,14 @@
  */
 
 var csInterface = new CSInterface();
+
+// Thinking Orb Animation Engine
+var thinkingOrb = null;
+try {
+    if (typeof ThinkingOrb === 'function') {
+        thinkingOrb = new ThinkingOrb('orb-canvas', { size: 36, state: 'disconnected' });
+    }
+} catch (e) {}
 
 // DOM References
 var statusSpan = document.getElementById('status');
@@ -22,7 +30,7 @@ var statProjectTotal = document.getElementById('stat-project-total');
 var statToday = document.getElementById('stat-today');
 
 var customStatusInput = document.getElementById('custom-status');
-var moodChips = document.querySelectorAll('.mood-chip');
+var workflowChips = document.querySelectorAll('.workflow-chip');
 
 var badgeLayers = document.getElementById('badge-layers');
 var badge4k = document.getElementById('badge-4k');
@@ -32,7 +40,6 @@ var badgeVertical = document.getElementById('badge-vertical');
 var toggleProjectTime = document.getElementById('toggle-project-time');
 var toggleWorkflow = document.getElementById('toggle-workflow');
 var toggleFormat = document.getElementById('toggle-format');
-var toggleEmojis = document.getElementById('toggle-emojis');
 var toggleExtension = document.getElementById('toggle-extension');
 var toggleSpecs = document.getElementById('toggle-specs');
 var toggleDuration = document.getElementById('toggle-duration');
@@ -45,7 +52,7 @@ var isLaunching = false;
 
 var settings = {
     privacyMode: false,
-    useEmojis: true,
+    useEmojis: false,
     stripExtension: true,
     showSpecs: true,
     showDuration: true,
@@ -112,7 +119,7 @@ function formatReadableTime(totalSec) {
     return Math.max(1, mins) + "m";
 }
 
-// Optimized 1-second interval with DOM guard checks
+// Precision interval with DOM guard checks
 setInterval(function() {
     sessionSeconds++;
     todaySeconds++;
@@ -141,7 +148,7 @@ function getCurrentProjectTimeTag() {
     if (!settings.showProjectTime) return "";
     var pTime = projectTimes[currentRawProject] || 0;
     if (pTime < 60) return "";
-    return (settings.useEmojis ? "⏱️ " : "") + formatReadableTime(pTime);
+    return "[" + formatReadableTime(pTime) + "]";
 }
 
 // ==========================================
@@ -154,7 +161,6 @@ function loadSavedSettings() {
             var parsed = JSON.parse(saved);
             if (typeof parsed === 'object' && parsed !== null) {
                 if (typeof parsed.privacyMode === 'boolean') settings.privacyMode = parsed.privacyMode;
-                if (typeof parsed.useEmojis === 'boolean') settings.useEmojis = parsed.useEmojis;
                 if (typeof parsed.stripExtension === 'boolean') settings.stripExtension = parsed.stripExtension;
                 if (typeof parsed.showSpecs === 'boolean') settings.showSpecs = parsed.showSpecs;
                 if (typeof parsed.showDuration === 'boolean') settings.showDuration = parsed.showDuration;
@@ -171,7 +177,6 @@ function loadSavedSettings() {
     if (toggleProjectTime) toggleProjectTime.checked = settings.showProjectTime;
     if (toggleWorkflow) toggleWorkflow.checked = settings.showWorkflow;
     if (toggleFormat) toggleFormat.checked = settings.showFormatTag;
-    if (toggleEmojis) toggleEmojis.checked = settings.useEmojis;
     if (toggleExtension) toggleExtension.checked = settings.stripExtension;
     if (toggleSpecs) toggleSpecs.checked = settings.showSpecs;
     if (toggleDuration) toggleDuration.checked = settings.showDuration;
@@ -180,7 +185,7 @@ function loadSavedSettings() {
     if (togglePrivacy) togglePrivacy.checked = settings.privacyMode;
     if (customStatusInput) customStatusInput.value = settings.customStatus || "";
 
-    highlightActiveMoodChip(settings.customStatus);
+    highlightActiveWorkflowChip(settings.customStatus);
 }
 
 function saveSettings() {
@@ -192,7 +197,7 @@ function saveSettings() {
 function getSettingsParam() {
     var payload = {
         privacyMode: settings.privacyMode,
-        useEmojis: settings.useEmojis,
+        useEmojis: false,
         stripExtension: settings.stripExtension,
         showSpecs: settings.showSpecs,
         showDuration: settings.showDuration,
@@ -214,9 +219,12 @@ function setStatusState(type, text) {
     if (statusSpan && statusSpan.textContent !== text) {
         statusSpan.textContent = text;
     }
-    var targetClass = 'status-pill status-' + type;
+    var targetClass = 'connection-status-label status-' + type;
     if (statusBadge && statusBadge.className !== targetClass) {
         statusBadge.className = targetClass;
+    }
+    if (thinkingOrb) {
+        thinkingOrb.setState(type);
     }
 }
 
@@ -231,33 +239,33 @@ function updateMilestones(info) {
     var layersUnlocked = info.layers >= 100;
     if (layersUnlocked !== _lastLayersUnlocked && badgeLayers) {
         _lastLayersUnlocked = layersUnlocked;
-        badgeLayers.className = layersUnlocked ? 'badge-item badge-unlocked' : 'badge-item badge-locked';
+        badgeLayers.className = layersUnlocked ? 'metric-badge badge-unlocked' : 'metric-badge badge-locked';
     }
 
     var fourKUnlocked = info.w >= 3840 || info.h >= 2160;
     if (fourKUnlocked !== _last4kUnlocked && badge4k) {
         _last4kUnlocked = fourKUnlocked;
-        badge4k.className = fourKUnlocked ? 'badge-item badge-unlocked' : 'badge-item badge-locked';
+        badge4k.className = fourKUnlocked ? 'metric-badge badge-unlocked' : 'metric-badge badge-locked';
     }
 
     var fpsUnlocked = info.fps >= 60;
     if (fpsUnlocked !== _lastFpsUnlocked && badgeFps) {
         _lastFpsUnlocked = fpsUnlocked;
-        badgeFps.className = fpsUnlocked ? 'badge-item badge-unlocked' : 'badge-item badge-locked';
+        badgeFps.className = fpsUnlocked ? 'metric-badge badge-unlocked' : 'metric-badge badge-locked';
     }
 
     var vertUnlocked = (info.w === 1080 && info.h === 1920) || (info.h > info.w && Math.abs((info.h / info.w) - (16 / 9)) < 0.05);
     if (vertUnlocked !== _lastVertUnlocked && badgeVertical) {
         _lastVertUnlocked = vertUnlocked;
-        badgeVertical.className = vertUnlocked ? 'badge-item badge-unlocked' : 'badge-item badge-locked';
+        badgeVertical.className = vertUnlocked ? 'metric-badge badge-unlocked' : 'metric-badge badge-locked';
     }
 }
 
-function highlightActiveMoodChip(text) {
-    var val = (text || "").trim();
-    moodChips.forEach(function(chip) {
-        var tag = chip.getAttribute('data-tag');
-        if (val && tag && val.indexOf(tag.replace(/^[^\w]+/, '').trim()) !== -1) {
+function highlightActiveWorkflowChip(text) {
+    var val = (text || "").trim().toLowerCase();
+    workflowChips.forEach(function(chip) {
+        var tag = (chip.getAttribute('data-tag') || "").trim().toLowerCase();
+        if (val && tag && val.indexOf(tag) !== -1) {
             chip.classList.add('active');
         } else if (!val && !tag) {
             chip.classList.add('active');
@@ -270,6 +278,7 @@ function highlightActiveMoodChip(text) {
 function loadBridge() {
     if (isLaunching) return;
     isLaunching = true;
+    setStatusState('connecting', 'Connecting...');
 
     var extensionPath = csInterface.getSystemPath(SystemPath.EXTENSION);
     var safeExtPath = extensionPath.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
@@ -342,7 +351,7 @@ function updateStatus() {
             }
         } catch (e) {
             if (!isLaunching) {
-                setStatusState("disconnected", "Reconnecting...");
+                setStatusState("connecting", "Reconnecting...");
                 loadBridge();
             } else {
                 setStatusState("disconnected", "Bridge Offline");
@@ -367,6 +376,7 @@ if (connectButton) {
                 updateStatus();
             });
         } else {
+            setStatusState('connecting', 'Connecting...');
             csInterface.evalScript('connectToDiscord(' + getSettingsParam() + ')', function() {
                 updateStatus();
             });
@@ -374,7 +384,7 @@ if (connectButton) {
     };
 }
 
-moodChips.forEach(function(chip) {
+workflowChips.forEach(function(chip) {
     chip.onclick = function() {
         var tag = chip.getAttribute('data-tag') || "";
         if (customStatusInput) {
@@ -388,7 +398,6 @@ function onSettingChange() {
     if (toggleProjectTime) settings.showProjectTime = !!toggleProjectTime.checked;
     if (toggleWorkflow) settings.showWorkflow = !!toggleWorkflow.checked;
     if (toggleFormat) settings.showFormatTag = !!toggleFormat.checked;
-    if (toggleEmojis) settings.useEmojis = !!toggleEmojis.checked;
     if (toggleExtension) settings.stripExtension = !!toggleExtension.checked;
     if (toggleSpecs) settings.showSpecs = !!toggleSpecs.checked;
     if (toggleDuration) settings.showDuration = !!toggleDuration.checked;
@@ -397,7 +406,7 @@ function onSettingChange() {
     if (togglePrivacy) settings.privacyMode = !!togglePrivacy.checked;
     if (customStatusInput) settings.customStatus = customStatusInput.value.trim();
 
-    highlightActiveMoodChip(settings.customStatus);
+    highlightActiveWorkflowChip(settings.customStatus);
     saveSettings();
 
     if (connected) {
@@ -412,7 +421,6 @@ function onSettingChange() {
 if (toggleProjectTime) toggleProjectTime.onchange = onSettingChange;
 if (toggleWorkflow) toggleWorkflow.onchange = onSettingChange;
 if (toggleFormat) toggleFormat.onchange = onSettingChange;
-if (toggleEmojis) toggleEmojis.onchange = onSettingChange;
 if (toggleExtension) toggleExtension.onchange = onSettingChange;
 if (toggleSpecs) toggleSpecs.onchange = onSettingChange;
 if (toggleDuration) toggleDuration.onchange = onSettingChange;
