@@ -1,0 +1,621 @@
+:root {
+  --bg-deep: #000000;
+  --bg-surface-0: #080808;
+  --bg-surface-1: #0f0f0f;
+  --bg-surface-2: #161616;
+  --bg-surface-3: #1f1f1f;
+  --bg-surface-elevated: #262626;
+
+  --border-subtle: rgba(255, 255, 255, 0.07);
+  --border-medium: rgba(255, 255, 255, 0.14);
+  --border-bright: rgba(255, 255, 255, 0.28);
+  --border-glow: rgba(255, 255, 255, 0.6);
+
+  --text-high: #ffffff;
+  --text-mid: #b0b0b0;
+  --text-low: #6a6a6a;
+  --text-muted: #444444;
+
+  --radius-xs: 3px;
+  --radius-sm: 6px;
+  --radius-md: 9px;
+  --radius-lg: 14px;
+  --radius-full: 9999px;
+
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  background-color: var(--bg-deep);
+  color: var(--text-high);
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  line-height: 1.4;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* Penumbra Ultra-Minimal Monochromatic Scrollbar */
+::-webkit-scrollbar {
+  width: 3px;
+  height: 3px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-full);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+  max-width: 100%;
+  min-height: 100%;
+  background: radial-gradient(circle at 50% 0%, #111111 0%, #000000 75%);
+}
+
+/* =========================================================
+   Penumbra Header & Monochromatic Thinking Orb
+   ========================================================= */
+.penumbra-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 6px 8px 6px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.brand-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.orb-wrapper {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  background: radial-gradient(circle, rgba(255,255,255,0.06) 0%, rgba(0,0,0,0.8) 100%);
+  border: 1px solid var(--border-medium);
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.04), inset 0 0 6px rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+/* Ensure ThinkingOrb canvas is strictly monochromatic */
+.orb-wrapper canvas {
+  filter: grayscale(100%) contrast(110%);
+  display: block;
+}
+
+.brand-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.brand-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-high);
+}
+
+.pill-mono {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--text-mid);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-subtle);
+  padding: 1px 5px;
+  border-radius: var(--radius-xs);
+}
+
+.status-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9.5px;
+  font-weight: 500;
+  color: var(--text-low);
+  font-family: var(--font-mono);
+}
+
+.status-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: var(--radius-full);
+  background: #333333;
+  transition: all 0.3s ease;
+}
+
+.status-dot.connected {
+  background: #ffffff;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.85);
+}
+
+.status-dot.connecting {
+  background: #888888;
+  animation: pulse-mono 1.4s infinite ease-in-out;
+}
+
+.status-dot.rendering {
+  background: #ffffff;
+  animation: shimmer-dot 0.8s infinite alternate;
+}
+
+@keyframes pulse-mono {
+  0%, 100% { opacity: 0.3; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.15); box-shadow: 0 0 6px #ffffff; }
+}
+
+@keyframes shimmer-dot {
+  0% { box-shadow: 0 0 2px #ffffff; }
+  100% { box-shadow: 0 0 10px #ffffff; }
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Monochromatic Buttons */
+.btn-penumbra {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  font-family: var(--font-sans);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 5px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-medium);
+  background: linear-gradient(180deg, #1d1d1d 0%, #101010 100%);
+  color: var(--text-high);
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 2px 4px rgba(0, 0, 0, 0.6);
+}
+
+.btn-penumbra:hover {
+  background: linear-gradient(180deg, #282828 0%, #181818 100%);
+  border-color: var(--border-bright);
+  color: #ffffff;
+  transform: translateY(-0.5px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 3px 8px rgba(0, 0, 0, 0.8);
+}
+
+.btn-penumbra:active {
+  transform: translateY(0.5px);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.9);
+}
+
+.btn-penumbra.connected {
+  background: #ffffff;
+  color: #000000;
+  border-color: #ffffff;
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.3);
+}
+.btn-penumbra.connected:hover {
+  background: #e6e6e6;
+}
+
+.btn-ghost-icon {
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-mid);
+  padding: 5px 7px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.btn-ghost-icon:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--border-medium);
+  color: #ffffff;
+}
+
+/* =========================================================
+   Penumbra Surfaces & Cards
+   ========================================================= */
+.penumbra-card {
+  position: relative;
+  background: var(--bg-surface-0);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 9px 11px;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  transition: border-color 0.2s ease;
+}
+
+.penumbra-card:hover {
+  border-color: var(--border-medium);
+}
+
+.card-label {
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-low);
+  margin-bottom: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Telemetry Grid */
+.telemetry-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.telemetry-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+}
+
+.telemetry-tag {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.telemetry-num {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--text-high);
+}
+
+.telemetry-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border-subtle);
+}
+
+/* =========================================================
+   BorderBeam Monochromatic Preview Card
+   ========================================================= */
+.beam-card-container {
+  position: relative;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.discord-preview-box {
+  background: #090909;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.discord-ae-avatar-mono {
+  width: 38px;
+  height: 38px;
+  border-radius: 7px;
+  background: linear-gradient(145deg, #1c1c1c 0%, #0a0a0a 100%);
+  border: 1px solid var(--border-medium);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15), 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+
+.ae-glyph-mono {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.04em;
+}
+
+.discord-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.discord-header-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.02em;
+}
+
+.discord-line-primary {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--text-mid);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--font-mono);
+}
+
+.discord-line-secondary {
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--text-low);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--font-mono);
+}
+
+/* =========================================================
+   Activity Chips (Liquid Monochromatic Interaction)
+   ========================================================= */
+.activity-chips-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.activity-chip-mono {
+  background: #111111;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-low);
+  padding: 3px 9px;
+  font-size: 10px;
+  font-weight: 500;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.activity-chip-mono:hover {
+  background: #1a1a1a;
+  color: var(--text-high);
+  border-color: var(--border-medium);
+}
+
+.activity-chip-mono.active {
+  background: #ffffff;
+  color: #000000;
+  font-weight: 700;
+  border-color: #ffffff;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.25);
+}
+
+.activity-chip-reset {
+  color: var(--text-muted);
+}
+.activity-chip-reset:hover {
+  color: #ffffff;
+  border-color: var(--border-bright);
+}
+
+.input-box-mono {
+  margin-top: 7px;
+  width: 100%;
+}
+
+.input-mono {
+  width: 100%;
+  background: #050505;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  font-size: 11px;
+  color: var(--text-high);
+  font-family: var(--font-sans);
+  outline: none;
+  transition: all 0.15s ease;
+  user-select: text;
+}
+
+.input-mono:focus {
+  border-color: var(--border-bright);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+  background: #0a0a0a;
+}
+
+.input-mono::placeholder {
+  color: var(--text-muted);
+}
+
+/* =========================================================
+   Composition Metrics (Monochromatic Milestones)
+   ========================================================= */
+.milestones-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 5px;
+}
+
+.metric-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 2px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.02);
+  text-align: center;
+  transition: all 0.25s ease;
+}
+
+.metric-cell.locked {
+  opacity: 0.3;
+}
+
+.metric-cell.unlocked {
+  opacity: 1;
+  border-color: var(--border-bright);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 8px rgba(255, 255, 255, 0.06);
+}
+
+.metric-cell-title {
+  font-size: 7.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.metric-cell.unlocked .metric-cell-title {
+  color: var(--text-mid);
+}
+
+.metric-cell-val {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-mid);
+  white-space: nowrap;
+}
+
+.metric-cell.unlocked .metric-cell-val {
+  color: #ffffff;
+}
+
+/* =========================================================
+   Settings Toggles (Monochromatic)
+   ========================================================= */
+.toggles-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  padding: 2px 0;
+}
+
+.toggle-label-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-right: 10px;
+}
+
+.toggle-name {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-high);
+}
+
+.toggle-hint {
+  font-size: 9.5px;
+  color: var(--text-low);
+}
+
+.toggle-switch {
+  position: relative;
+  width: 28px;
+  height: 15px;
+  background: #1c1c1c;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+}
+
+.toggle-thumb {
+  position: absolute;
+  top: 1.5px;
+  left: 1.5px;
+  width: 10px;
+  height: 10px;
+  background: #777777;
+  border-radius: var(--radius-full);
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), background 0.2s;
+}
+
+.toggle-row.active .toggle-switch {
+  background: #333333;
+  border-color: var(--border-bright);
+}
+
+.toggle-row.active .toggle-thumb {
+  transform: translateX(13px);
+  background: #ffffff;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.7);
+}
+
+/* =========================================================
+   Footer
+   ========================================================= */
+.penumbra-footer {
+  padding: 6px 0 2px 0;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.footer-credit {
+  font-size: 9px;
+  color: var(--text-muted);
+}
+
+.footer-author {
+  color: var(--text-mid);
+  font-weight: 600;
+}
+
+.footer-link {
+  font-size: 9px;
+  color: var(--text-low);
+  text-decoration: none;
+  font-family: var(--font-mono);
+  transition: color 0.15s ease;
+}
+
+.footer-link:hover {
+  color: var(--text-high);
+  text-decoration: underline;
+}
