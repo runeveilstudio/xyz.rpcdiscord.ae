@@ -255,7 +255,10 @@ function getProjectInfo() {
         }
 
         if (currentSettings.showProjectTime && currentSettings.projectTimeStr && currentSettings.projectTimeStr.length > 0) {
-            projectName += " [" + currentSettings.projectTimeStr + "]";
+            var cleanTime = String(currentSettings.projectTimeStr).replace(/[\[\]]/g, "").trim();
+            if (cleanTime.length > 0) {
+                projectName += " [" + cleanTime + "]";
+            }
         }
 
         if (currentSettings.customStatus && currentSettings.customStatus.length > 0) {
@@ -270,33 +273,42 @@ function getProjectInfo() {
                 label = "🎬 " + label;
             }
 
-            var tags = [];
+            var specParts = [];
 
-            if (currentSettings.showFormatTag) {
-                var fmt = getFormatTag(comp.width, comp.height, currentSettings.useEmojis);
-                if (fmt) tags.push(fmt);
-            }
+            // Group format & resolution & framerate into a cohesive professional spec
+            var specStr = "";
+            var fmt = currentSettings.showFormatTag ? getFormatTag(comp.width, comp.height, currentSettings.useEmojis) : "";
 
-            if (currentSettings.showSpecs) {
-                tags.push(comp.width + "x" + comp.height);
-                tags.push(Math.round(comp.frameRate) + "fps");
+            if (currentSettings.showSpecs && comp.width > 0 && comp.height > 0) {
+                specStr = comp.width + "x" + comp.height;
+                if (fmt && fmt !== specStr) {
+                    specStr += " (" + fmt + ")";
+                }
+                if (comp.frameRate > 0) {
+                    specStr += " @ " + Math.round(comp.frameRate) + "fps";
+                }
+                specParts.push(specStr);
+            } else if (fmt) {
+                specParts.push(fmt);
             }
 
             if (currentSettings.showDuration && comp.duration > 0) {
                 var dur = formatDuration(comp.duration);
-                if (dur) tags.push(dur);
+                if (dur) specParts.push(dur);
             }
 
             if (currentSettings.showLayers && comp.numLayers > 0) {
-                tags.push(comp.numLayers + (comp.numLayers === 1 ? " layer" : " layers"));
+                specParts.push(comp.numLayers + (comp.numLayers === 1 ? " layer" : " layers"));
             }
 
             if (currentSettings.showWorkflow) {
                 var wf = detectWorkflow(comp, currentSettings.useEmojis);
-                if (wf) tags.push(wf);
+                if (wf && wf.toLowerCase() !== String(currentSettings.customStatus).toLowerCase()) {
+                    specParts.push(wf);
+                }
             }
 
-            compName = tags.length > 0 ? label + " • " + tags.join(" • ") : label;
+            compName = specParts.length > 0 ? label + " • " + specParts.join(" • ") : label;
         } else if (app.project && app.project.items && app.project.items.length > 0) {
             compName = currentSettings.useEmojis ? "🎬 Browsing Assets" : "Browsing Assets";
         } else {
