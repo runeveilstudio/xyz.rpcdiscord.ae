@@ -128,9 +128,10 @@ function detectWorkflow(comp, emoji) {
 }
 
 function launchBridge(extPath) {
-    var binPath = extPath + "\\bin";
-    var launcher = new File(binPath + "\\launcher.exe");
-    var bridge = new File(binPath + "\\discord-bridge.exe");
+    if (!extPath) return;
+    var cleanPath = String(extPath).replace(/\\/g, "/");
+    var launcher = new File(cleanPath + "/bin/launcher.exe");
+    var bridge = new File(cleanPath + "/bin/discord-bridge.exe");
 
     if (launcher.exists) {
         launcher.execute();
@@ -154,24 +155,30 @@ function sendCommand(actionName, dataObject) {
     var payload = '{"action":"' + actionName + '","data":{"project":"' + p + '","comp":"' + c + '"}}\n';
     var conn = new Socket();
     var status = "OFFLINE";
-    var msg = "Connection failed";
+    var msg = "Bridge offline";
 
-    conn.timeout = 1;
+    conn.timeout = 2;
 
-    if (conn.open("127.0.0.1:54345", "UTF-8")) {
-        conn.write(payload);
-        var raw = conn.readln();
-        conn.close();
+    try {
+        if (conn.open("127.0.0.1:54345", "UTF-8")) {
+            conn.write(payload);
+            var raw = conn.readln();
+            conn.close();
 
-        if (raw && raw.length > 0) {
-            try {
-                var res = eval("(" + raw + ")");
-                status = res.status;
-                msg = res.message;
-            } catch (e) {
-                status = "ERROR";
+            if (raw && raw.length > 0) {
+                try {
+                    var res = eval("(" + raw + ")");
+                    status = res.status;
+                    msg = res.message;
+                } catch (e) {
+                    status = "ERROR";
+                    msg = "Malformed response";
+                }
             }
         }
+    } catch (e) {
+        status = "OFFLINE";
+        msg = "Socket error";
     }
 
     var safeMsg = String(msg).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r');
@@ -331,8 +338,9 @@ function getCurrentPresencePreview(settingsJson) {
     return '{"project":"' + p + '","comp":"' + c + '","rawProject":"' + safeRawProj + '","w":' + w + ',"h":' + h + ',"fps":' + fps + ',"layers":' + layers + ',"rendering":' + (isRendering ? 'true' : 'false') + '}';
 }
 
-function connectToDiscord(settingsJson) {
+function connectToDiscord(settingsJson, extPath) {
     if (settingsJson) updateSettings(settingsJson);
+    if (extPath) launchBridge(extPath);
     var info = getProjectInfo();
     if (info[0] === -1 && info[1] === -1) return;
 
