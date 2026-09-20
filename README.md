@@ -30,8 +30,8 @@ A lightweight, ultra-responsive Discord Rich Presence extension for **Adobe Afte
    ```
 
 2. Move or copy the folder into your Adobe CEP extensions directory:
-   - **Windows**: `C:\Program Files (x86)\Common Files\Adobe\CEP\extensions\com.ae.discordrpc`
-   - **macOS**: `~/Library/Application Support/Adobe/CEP/extensions/com.ae.discordrpc`
+   - **Windows**: `C:\Program Files (x86)\Common Files\Adobe\CEP\extensions\xyz.rpcdiscord.ae`
+   - **macOS**: `~/Library/Application Support/Adobe/CEP/extensions\xyz.rpcdiscord.ae`
 
 3. Ensure PlayerDebugMode is enabled (standard for CEP unsigned development):
    - **Windows**: In Registry Editor (`regedit`), navigate to `HKEY_CURRENT_USER\Software\Adobe\CSXS.8` (or your current AE CSXS version) and create/set string value `PlayerDebugMode` to `"1"`.
