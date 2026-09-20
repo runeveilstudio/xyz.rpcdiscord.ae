@@ -194,9 +194,53 @@ function getBridgeStatus(settingsJson) {
     });
 }
 
+// Persistent Active Composition Cache (prevents dropping to No Active Comp when focus shifts)
+var _cachedActiveComp = null;
+
+function _isCompValid(c) {
+    try {
+        return !!(c && c.name && c.numLayers !== undefined && c.id);
+    } catch (e) {
+        return false;
+    }
+}
+
+function findActiveComp() {
+    if (!app.project) return null;
+
+    // 1. Direct activeItem check
+    try {
+        if (app.project.activeItem && (app.project.activeItem instanceof CompItem)) {
+            _cachedActiveComp = app.project.activeItem;
+            return _cachedActiveComp;
+        }
+    } catch (e) {}
+
+    // 2. Fallback to cached comp if still valid in the project
+    if (_cachedActiveComp && _isCompValid(_cachedActiveComp)) {
+        return _cachedActiveComp;
+    }
+
+    // 3. Fallback to finding any open or available CompItem in project
+    try {
+        var num = app.project.numItems;
+        if (num && num > 0) {
+            for (var i = 1; i <= num; i++) {
+                var it = app.project.item(i);
+                if (it && (it instanceof CompItem)) {
+                    _cachedActiveComp = it;
+                    return _cachedActiveComp;
+                }
+            }
+        }
+    } catch (e) {}
+
+    return null;
+}
+
 function getProjectInfo() {
     var projectName = "Unsaved Project";
-    var compName = "No Active Comp";
+    var compName = "Editing Project";
 
     try {
         // Active Render Queue Item check
@@ -265,9 +309,10 @@ function getProjectInfo() {
             projectName += " • " + currentSettings.customStatus;
         }
 
-        // Active composition metadata
-        if (app.project && app.project.activeItem && (app.project.activeItem instanceof CompItem)) {
-            var comp = app.project.activeItem;
+        // Active composition metadata with persistent caching
+        var comp = findActiveComp();
+
+        if (comp) {
             var label = comp.name;
             if (currentSettings.useEmojis) {
                 label = "🎬 " + label;
@@ -309,10 +354,10 @@ function getProjectInfo() {
             }
 
             compName = specParts.length > 0 ? label + " • " + specParts.join(" • ") : label;
-        } else if (app.project && app.project.items && app.project.items.length > 0) {
+        } else if (app.project && app.project.numItems && app.project.numItems > 0) {
             compName = currentSettings.useEmojis ? "🎬 Browsing Assets" : "Browsing Assets";
         } else {
-            compName = currentSettings.useEmojis ? "🎬 No Active Comp" : "No Active Comp";
+            compName = currentSettings.useEmojis ? "🎬 Editing Project" : "Editing Project";
         }
     } catch (err) {
         return [projectName, compName];
@@ -337,12 +382,12 @@ function getCurrentPresencePreview(settingsJson) {
         if (app.project && app.project.renderQueue && app.project.renderQueue.rendering) {
             isRendering = true;
         }
-        if (app.project && app.project.activeItem && (app.project.activeItem instanceof CompItem)) {
-            var activeComp = app.project.activeItem;
-            w = activeComp.width;
-            h = activeComp.height;
-            fps = Math.round(activeComp.frameRate);
-            layers = activeComp.numLayers;
+        var comp = findActiveComp();
+        if (comp) {
+            w = comp.width;
+            h = comp.height;
+            fps = Math.round(comp.frameRate);
+            layers = comp.numLayers;
         }
     } catch (e) {}
 
