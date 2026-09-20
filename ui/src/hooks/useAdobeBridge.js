@@ -217,12 +217,12 @@ export function useAdobeBridge() {
         }
         setPreview((prev) => ({
           ...prev,
-          project: info.project || 'Unsaved Project',
-          comp: info.comp || 'No Active Comp',
-          layers: info.layers || 0,
-          w: info.w || 0,
-          h: info.h || 0,
-          fps: info.fps || 0,
+          project: info.project || prev.project || 'Unsaved Project',
+          comp: info.comp || prev.comp || 'Comp 1',
+          layers: info.layers || prev.layers || 0,
+          w: info.w || prev.w || 0,
+          h: info.h || prev.h || 0,
+          fps: info.fps || prev.fps || 0,
           rendering: !!info.rendering
         }));
 

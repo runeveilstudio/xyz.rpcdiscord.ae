@@ -204,8 +204,13 @@ function getBridgeStatus(settingsJson) {
     });
 }
 
-// Persistent Active Composition Cache (prevents dropping to No Active Comp when focus shifts)
+// Persistent Active Composition Cache & Metadata Memory (prevents losing comp info when AE is in background)
 var _cachedActiveComp = null;
+var _savedCompName = "";
+var _savedCompWidth = 0;
+var _savedCompHeight = 0;
+var _savedCompFps = 0;
+var _savedCompDuration = 0;
 
 function _isComp(it) {
     if (!it) return false;
@@ -214,6 +219,9 @@ function _isComp(it) {
     } catch (e) {}
     try {
         if (typeof CompItem !== "undefined" && (it instanceof CompItem)) return true;
+    } catch (e) {}
+    try {
+        if (it.layers !== undefined && it.workAreaDuration !== undefined) return true;
     } catch (e) {}
     try {
         if (it.numLayers !== undefined && it.width !== undefined && it.frameRate !== undefined) return true;
@@ -238,6 +246,11 @@ function findActiveComp() {
         var ai = app.project.activeItem;
         if (_isComp(ai)) {
             _cachedActiveComp = ai;
+            _savedCompName = ai.name;
+            _savedCompWidth = ai.width;
+            _savedCompHeight = ai.height;
+            _savedCompFps = Math.round(ai.frameRate);
+            _savedCompDuration = ai.duration;
             return ai;
         }
     } catch (e) {}
@@ -256,6 +269,11 @@ function findActiveComp() {
             for (var s = 0; s < sel.length; s++) {
                 if (_isComp(sel[s])) {
                     _cachedActiveComp = sel[s];
+                    _savedCompName = sel[s].name;
+                    _savedCompWidth = sel[s].width;
+                    _savedCompHeight = sel[s].height;
+                    _savedCompFps = Math.round(sel[s].frameRate);
+                    _savedCompDuration = sel[s].duration;
                     return sel[s];
                 }
             }
@@ -270,6 +288,13 @@ function findActiveComp() {
                 var it = app.project.item(i);
                 if (_isComp(it)) {
                     _cachedActiveComp = it;
+                    if (!_savedCompName || _savedCompName.length === 0) {
+                        _savedCompName = it.name;
+                        _savedCompWidth = it.width;
+                        _savedCompHeight = it.height;
+                        _savedCompFps = Math.round(it.frameRate);
+                        _savedCompDuration = it.duration;
+                    }
                     return it;
                 }
             }
@@ -281,7 +306,7 @@ function findActiveComp() {
 
 function getProjectInfo() {
     var projectName = "Unsaved Project";
-    var compName = "No Active Comp";
+    var compName = "Comp 1";
 
     try {
         // Active Render Queue Item check
@@ -352,22 +377,60 @@ function getProjectInfo() {
         var hasCustom = rawCustom.length > 0;
 
         if (comp) {
-            var label = comp.name;
+            try {
+                _savedCompName = comp.name;
+                _savedCompWidth = comp.width;
+                _savedCompHeight = comp.height;
+                _savedCompFps = Math.round(comp.frameRate);
+                _savedCompDuration = comp.duration;
+            } catch (e) {}
+        }
+
+        var activeName = _savedCompName;
+        var activeW = _savedCompWidth;
+        var activeH = _savedCompHeight;
+        var activeFps = _savedCompFps;
+        var activeDur = _savedCompDuration;
+
+        if (!activeName || activeName.length === 0) {
+            try {
+                if (app.project && app.project.numItems > 0) {
+                    for (var j = 1; j <= app.project.numItems; j++) {
+                        var pi = app.project.item(j);
+                        if (_isComp(pi)) {
+                            activeName = pi.name;
+                            activeW = pi.width;
+                            activeH = pi.height;
+                            activeFps = Math.round(pi.frameRate);
+                            activeDur = pi.duration;
+                            _savedCompName = activeName;
+                            _savedCompWidth = activeW;
+                            _savedCompHeight = activeH;
+                            _savedCompFps = activeFps;
+                            _savedCompDuration = activeDur;
+                            break;
+                        }
+                    }
+                }
+            } catch (e) {}
+        }
+
+        if (activeName && activeName.length > 0) {
             var parts = [];
 
             // Comp size and frame rate (e.g. 1080x1920 @ 60fps)
-            if (comp.width > 0 && comp.height > 0) {
-                var resStr = comp.width + "x" + comp.height;
-                if (comp.frameRate > 0) {
-                    resStr += " @ " + Math.round(comp.frameRate) + "fps";
+            if (activeW > 0 && activeH > 0) {
+                var resStr = activeW + "x" + activeH;
+                if (activeFps > 0) {
+                    resStr += " @ " + activeFps + "fps";
                 }
                 parts.push(resStr);
             }
 
             // Duration (e.g. 0:30)
-            if (comp.duration > 0) {
-                var dur = formatDuration(comp.duration);
-                if (dur) parts.push(dur);
+            if (activeDur > 0) {
+                var dur = formatDuration(activeDur);
+                if (dur && dur !== "0:00") parts.push(dur);
             }
 
             // Optional custom status / preset if selected
@@ -375,11 +438,11 @@ function getProjectInfo() {
                 parts.push(rawCustom);
             }
 
-            compName = label + (parts.length > 0 ? " • " + parts.join(" • ") : "");
+            compName = activeName + (parts.length > 0 ? " • " + parts.join(" • ") : "");
         } else if (hasCustom) {
             compName = rawCustom;
         } else {
-            compName = "No Active Comp";
+            compName = "Comp 1";
         }
     } catch (err) {
         return [projectName, compName];
