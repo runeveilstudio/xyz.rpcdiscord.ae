@@ -77,11 +77,12 @@ var _cachedWorkflowTag = "";
 function detectWorkflow(comp, emoji) {
     if (!comp || comp.numLayers <= 0) return "";
     
-    if (comp.id === _cachedCompId && comp.numLayers === _cachedLayerCount) {
+    var compId = (comp && comp.id !== undefined) ? comp.id : (comp ? comp.name : null);
+    if (compId === _cachedCompId && comp.numLayers === _cachedLayerCount) {
         return _cachedWorkflowTag;
     }
 
-    _cachedCompId = comp.id;
+    _cachedCompId = compId;
     _cachedLayerCount = comp.numLayers;
 
     var hasCamera = false;
@@ -94,19 +95,28 @@ function detectWorkflow(comp, emoji) {
     for (var i = 1; i <= limit; i++) {
         try {
             var layer = comp.layer(i);
-            if (layer instanceof CameraLayer) {
+            var isCam = false;
+            var isLight = false;
+            try { isCam = (typeof CameraLayer !== 'undefined' && layer instanceof CameraLayer); } catch(e) {}
+            try { isLight = (typeof LightLayer !== 'undefined' && layer instanceof LightLayer); } catch(e) {}
+
+            if (isCam) {
                 hasCamera = true;
                 break;
             }
-            if (layer instanceof LightLayer) {
+            if (isLight) {
                 hasLight = true;
                 break;
             }
-            if (layer instanceof TextLayer) {
-                textCount++;
-            } else if (layer instanceof ShapeLayer) {
-                shapeCount++;
-            } else if (layer.hasAudio && !layer.hasVideo) {
+            try {
+                if (typeof TextLayer !== 'undefined' && layer instanceof TextLayer) {
+                    textCount++;
+                } else if (typeof ShapeLayer !== 'undefined' && layer instanceof ShapeLayer) {
+                    shapeCount++;
+                }
+            } catch (e) {}
+
+            if (layer.hasAudio && !layer.hasVideo) {
                 audioCount++;
             }
         } catch (e) {}
@@ -199,7 +209,7 @@ var _cachedActiveComp = null;
 
 function _isCompValid(c) {
     try {
-        return !!(c && c.name && c.numLayers !== undefined && c.id);
+        return !!(c && c.name && c.numLayers !== undefined);
     } catch (e) {
         return false;
     }
@@ -208,7 +218,7 @@ function _isCompValid(c) {
 function findActiveComp() {
     if (!app.project) return null;
 
-    // 1. Direct activeItem check
+    // 1. Direct activeItem check (when timeline or comp viewer has focus)
     try {
         if (app.project.activeItem && (app.project.activeItem instanceof CompItem)) {
             _cachedActiveComp = app.project.activeItem;
@@ -217,9 +227,11 @@ function findActiveComp() {
     } catch (e) {}
 
     // 2. Fallback to cached comp if still valid in the project
-    if (_cachedActiveComp && _isCompValid(_cachedActiveComp)) {
-        return _cachedActiveComp;
-    }
+    try {
+        if (_cachedActiveComp && _isCompValid(_cachedActiveComp)) {
+            return _cachedActiveComp;
+        }
+    } catch (e) {}
 
     // 3. Fallback to finding any open or available CompItem in project
     try {
@@ -240,7 +252,7 @@ function findActiveComp() {
 
 function getProjectInfo() {
     var projectName = "Unsaved Project";
-    var compName = "Editing Project";
+    var compName = "Working in Timeline";
 
     try {
         // Active Render Queue Item check
@@ -305,22 +317,13 @@ function getProjectInfo() {
             }
         }
 
-        if (currentSettings.customStatus && currentSettings.customStatus.length > 0) {
-            projectName += " • " + currentSettings.customStatus;
-        }
-
         // Active composition metadata with persistent caching
         var comp = findActiveComp();
+        var rawCustom = currentSettings.customStatus ? String(currentSettings.customStatus).replace(/^\s+|\s+$/g, "") : "";
+        var hasCustom = rawCustom.length > 0;
 
+        var specParts = [];
         if (comp) {
-            var label = comp.name;
-            if (currentSettings.useEmojis) {
-                label = "🎬 " + label;
-            }
-
-            var specParts = [];
-
-            // Group format & resolution & framerate into a cohesive professional spec
             var specStr = "";
             var fmt = currentSettings.showFormatTag ? getFormatTag(comp.width, comp.height, currentSettings.useEmojis) : "";
 
@@ -346,18 +349,26 @@ function getProjectInfo() {
                 specParts.push(comp.numLayers + (comp.numLayers === 1 ? " layer" : " layers"));
             }
 
-            if (currentSettings.showWorkflow) {
+            if (currentSettings.showWorkflow && !hasCustom) {
                 var wf = detectWorkflow(comp, currentSettings.useEmojis);
-                if (wf && wf.toLowerCase() !== String(currentSettings.customStatus).toLowerCase()) {
-                    specParts.push(wf);
-                }
+                if (wf) specParts.push(wf);
             }
+        }
 
-            compName = specParts.length > 0 ? label + " • " + specParts.join(" • ") : label;
+        var specsSuffix = specParts.length > 0 ? " • " + specParts.join(" • ") : "";
+
+        if (comp && hasCustom) {
+            var baseLabel = (currentSettings.useEmojis ? "🎬 " : "") + comp.name;
+            compName = baseLabel + " • " + rawCustom + specsSuffix;
+        } else if (comp && !hasCustom) {
+            var baseLabel = (currentSettings.useEmojis ? "🎬 " : "") + comp.name;
+            compName = baseLabel + specsSuffix;
+        } else if (!comp && hasCustom) {
+            compName = (currentSettings.useEmojis ? "🎬 " : "") + rawCustom;
         } else if (app.project && app.project.numItems && app.project.numItems > 0) {
-            compName = currentSettings.useEmojis ? "🎬 Browsing Assets" : "Browsing Assets";
+            compName = currentSettings.useEmojis ? "🎬 Working in Timeline" : "Working in Timeline";
         } else {
-            compName = currentSettings.useEmojis ? "🎬 Editing Project" : "Editing Project";
+            compName = currentSettings.useEmojis ? "🎬 Project Workspace" : "Project Workspace";
         }
     } catch (err) {
         return [projectName, compName];
