@@ -207,9 +207,24 @@ function getBridgeStatus(settingsJson) {
 // Persistent Active Composition Cache (prevents dropping to No Active Comp when focus shifts)
 var _cachedActiveComp = null;
 
-function _isCompValid(c) {
+function _isComp(it) {
+    if (!it) return false;
     try {
-        return !!(c && c.name && c.numLayers !== undefined);
+        if (it.typeName === "Composition") return true;
+    } catch (e) {}
+    try {
+        if (typeof CompItem !== "undefined" && (it instanceof CompItem)) return true;
+    } catch (e) {}
+    try {
+        if (it.numLayers !== undefined && it.width !== undefined && it.frameRate !== undefined) return true;
+    } catch (e) {}
+    return false;
+}
+
+function _isCompValid(c) {
+    if (!c) return false;
+    try {
+        return !!(c.name && _isComp(c));
     } catch (e) {
         return false;
     }
@@ -218,30 +233,44 @@ function _isCompValid(c) {
 function findActiveComp() {
     if (!app.project) return null;
 
-    // 1. Direct activeItem check (when timeline or comp viewer has focus)
+    // 1. Direct activeItem
     try {
-        if (app.project.activeItem && (app.project.activeItem instanceof CompItem)) {
-            _cachedActiveComp = app.project.activeItem;
-            return _cachedActiveComp;
+        var ai = app.project.activeItem;
+        if (_isComp(ai)) {
+            _cachedActiveComp = ai;
+            return ai;
         }
     } catch (e) {}
 
-    // 2. Fallback to cached comp if still valid in the project
+    // 2. Previously cached comp
     try {
         if (_cachedActiveComp && _isCompValid(_cachedActiveComp)) {
             return _cachedActiveComp;
         }
     } catch (e) {}
 
-    // 3. Fallback to finding any open or available CompItem in project
+    // 3. Any selected comp in the project panel
+    try {
+        var sel = app.project.selection;
+        if (sel && sel.length > 0) {
+            for (var s = 0; s < sel.length; s++) {
+                if (_isComp(sel[s])) {
+                    _cachedActiveComp = sel[s];
+                    return sel[s];
+                }
+            }
+        }
+    } catch (e) {}
+
+    // 4. Any composition in the project items
     try {
         var num = app.project.numItems;
         if (num && num > 0) {
             for (var i = 1; i <= num; i++) {
                 var it = app.project.item(i);
-                if (it && (it instanceof CompItem)) {
+                if (_isComp(it)) {
                     _cachedActiveComp = it;
-                    return _cachedActiveComp;
+                    return it;
                 }
             }
         }
@@ -252,7 +281,7 @@ function findActiveComp() {
 
 function getProjectInfo() {
     var projectName = "Unsaved Project";
-    var compName = "Working in Timeline";
+    var compName = "No Active Comp";
 
     try {
         // Active Render Queue Item check
@@ -317,58 +346,40 @@ function getProjectInfo() {
             }
         }
 
-        // Active composition metadata with persistent caching
+        // Composition name, specs (dimensions, frame rate, duration) and optional custom status
         var comp = findActiveComp();
         var rawCustom = currentSettings.customStatus ? String(currentSettings.customStatus).replace(/^\s+|\s+$/g, "") : "";
         var hasCustom = rawCustom.length > 0;
 
-        var specParts = [];
         if (comp) {
-            var specStr = "";
-            var fmt = currentSettings.showFormatTag ? getFormatTag(comp.width, comp.height, currentSettings.useEmojis) : "";
+            var label = comp.name;
+            var parts = [];
 
-            if (currentSettings.showSpecs && comp.width > 0 && comp.height > 0) {
-                specStr = comp.width + "x" + comp.height;
-                if (fmt && fmt !== specStr) {
-                    specStr += " (" + fmt + ")";
-                }
+            // Comp size and frame rate (e.g. 1080x1920 @ 60fps)
+            if (comp.width > 0 && comp.height > 0) {
+                var resStr = comp.width + "x" + comp.height;
                 if (comp.frameRate > 0) {
-                    specStr += " @ " + Math.round(comp.frameRate) + "fps";
+                    resStr += " @ " + Math.round(comp.frameRate) + "fps";
                 }
-                specParts.push(specStr);
-            } else if (fmt) {
-                specParts.push(fmt);
+                parts.push(resStr);
             }
 
-            if (currentSettings.showDuration && comp.duration > 0) {
+            // Duration (e.g. 0:30)
+            if (comp.duration > 0) {
                 var dur = formatDuration(comp.duration);
-                if (dur) specParts.push(dur);
+                if (dur) parts.push(dur);
             }
 
-            if (currentSettings.showLayers && comp.numLayers > 0) {
-                specParts.push(comp.numLayers + (comp.numLayers === 1 ? " layer" : " layers"));
+            // Optional custom status / preset if selected
+            if (hasCustom) {
+                parts.push(rawCustom);
             }
 
-            if (currentSettings.showWorkflow && !hasCustom) {
-                var wf = detectWorkflow(comp, currentSettings.useEmojis);
-                if (wf) specParts.push(wf);
-            }
-        }
-
-        var specsSuffix = specParts.length > 0 ? " • " + specParts.join(" • ") : "";
-
-        if (comp && hasCustom) {
-            var baseLabel = (currentSettings.useEmojis ? "🎬 " : "") + comp.name;
-            compName = baseLabel + " • " + rawCustom + specsSuffix;
-        } else if (comp && !hasCustom) {
-            var baseLabel = (currentSettings.useEmojis ? "🎬 " : "") + comp.name;
-            compName = baseLabel + specsSuffix;
-        } else if (!comp && hasCustom) {
-            compName = (currentSettings.useEmojis ? "🎬 " : "") + rawCustom;
-        } else if (app.project && app.project.numItems && app.project.numItems > 0) {
-            compName = currentSettings.useEmojis ? "🎬 Working in Timeline" : "Working in Timeline";
+            compName = label + (parts.length > 0 ? " • " + parts.join(" • ") : "");
+        } else if (hasCustom) {
+            compName = rawCustom;
         } else {
-            compName = currentSettings.useEmojis ? "🎬 Project Workspace" : "Project Workspace";
+            compName = "No Active Comp";
         }
     } catch (err) {
         return [projectName, compName];
