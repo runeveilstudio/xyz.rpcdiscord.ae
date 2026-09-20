@@ -1,0 +1,10 @@
+# OS generated
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.BIN/
+.DS_Store
+
+# Logs
+*.log
+bin/bridge_errors.log

@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>AE Discord Rich Presence - Runeveil Studio</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="app-title">
+                <span class="app-logo">AE</span>
+                <h1>Discord RPC <span class="pro-tag">PRO</span></h1>
+            </div>
+            <div id="status-badge" class="status-pill status-disconnected">
+                <span class="status-dot"></span>
+                <span id="status">Disconnected</span>
+            </div>
+        </header>
+
+        <!-- Session & Project Stats Card -->
+        <section class="card stats-card">
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <span class="stat-label">SESSION</span>
+                    <span id="stat-session" class="stat-value">00:00</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-box">
+                    <span class="stat-label">PROJECT TOTAL</span>
+                    <span id="stat-project-total" class="stat-value">0m</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-box">
+                    <span class="stat-label">TODAY</span>
+                    <span id="stat-today" class="stat-value">0m</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Live Preview Card (Discord Profile Style) -->
+        <section class="card preview-card">
+            <div class="card-header">Live Discord Preview</div>
+            <div class="discord-preview">
+                <div class="discord-icon-wrapper">
+                    <div class="discord-ae-icon">Ae</div>
+                </div>
+                <div class="discord-details">
+                    <div class="discord-app-name">After Effects</div>
+                    <div id="preview-project" class="discord-line1">Project: Loading...</div>
+                    <div id="preview-comp" class="discord-line2">Comp: Loading...</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Action Controls -->
+        <div id="controls" class="control-row">
+            <button id="connect-btn" class="btn btn-primary">Connect</button>
+            <button id="refresh-btn" class="btn btn-secondary">Refresh</button>
+        </div>
+
+        <!-- Quick Mood & Activity Presets -->
+        <section class="card mood-card">
+            <div class="card-header">Activity Status & Presets</div>
+            <div class="mood-chips">
+                <button type="button" class="mood-chip" data-tag="Animating ⚡">⚡ Animating</button>
+                <button type="button" class="mood-chip" data-tag="Color Grading 🎨">🎨 Grading</button>
+                <button type="button" class="mood-chip" data-tag="VFX & Compositing 💥">💥 VFX</button>
+                <button type="button" class="mood-chip" data-tag="AMV / Video Edit ✂️">✂️ Editing</button>
+                <button type="button" class="mood-chip" data-tag="Taking a Break ☕">☕ AFK</button>
+                <button type="button" class="mood-chip mood-chip-clear" data-tag="">✕ Clear</button>
+            </div>
+            <div class="input-wrapper">
+                <input type="text" id="custom-status" class="text-input" placeholder="Custom activity text or mood..." maxlength="28">
+            </div>
+        </section>
+
+        <!-- Live Milestones & Achievements -->
+        <section class="card milestones-card">
+            <div class="card-header">Composition Milestones</div>
+            <div class="milestones-row">
+                <div id="badge-layers" class="badge-item badge-locked" title="Unlocked when comp has 100+ layers">
+                    <span class="badge-icon">🔥</span>
+                    <span class="badge-text">100+ Layers</span>
+                </div>
+                <div id="badge-4k" class="badge-item badge-locked" title="Unlocked when working in 4K resolution">
+                    <span class="badge-icon">💎</span>
+                    <span class="badge-text">4K Master</span>
+                </div>
+                <div id="badge-fps" class="badge-item badge-locked" title="Unlocked at 60fps or higher">
+                    <span class="badge-icon">🏎️</span>
+                    <span class="badge-text">60+ FPS</span>
+                </div>
+                <div id="badge-vertical" class="badge-item badge-locked" title="Unlocked for 9:16 Vertical video (TikTok/Reels/Shorts)">
+                    <span class="badge-icon">📱</span>
+                    <span class="badge-text">9:16 Reel</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features & Settings -->
+        <section class="card settings-card">
+            <div class="card-header">Presence Styling & Intelligence</div>
+            
+            <label class="setting-item">
+                <div class="setting-info">
+                    <span class="setting-title">Project Logged Time</span>
+                    <span class="setting-desc">Show lifetime hours [⏱️ 2h 45m] in Discord</span>
+                </div>
+                <input type="checkbox" id="toggle-project-time" class="switch-input" checked>
+                <span class="switch-slider"></span>
+            </label>
+
+            <label class="setting-item">
+                <div class="setting-info">
+                    <span class="setting-title">Smart Scene / Workflow Detection</span>
+                    <span class="setting-desc">Auto-detect 3D, Mograph, Typography</span>
+                </div>
+                <input type="checkbox" id="toggle-workflow" class="switch-input" checked>
+                <span class="switch-slider"></span>
+            </label>
+
+            <label class="setting-item">
+                <div class="setting-info">
+                    <span class="setting-title">Format & Resolution Badging</span>
+                    <span class="setting-desc">Add 4K, 2K, 1080p, or 📱 9:16 tags</span>
+                </div>
+                <input type="checkbox" id="toggle-format" class="switch-input" checked>
+                <span class="switch-slider"></span>
+            </label>
+
+            <label class="setting-item">
+                <div class="setting-info">
+                    <span class="setting-title">Subtle Icons & Emojis</span>
+                    <span class="setting-desc">Add 📁 project & 🎬 comp icons</span>
+                </div>
+                <input type="checkbox" id="toggle-emojis" class="switch-input" checked>
+                <span class="switch-slider"></span>
+            </label>
+
+            <label class="setting-item">
+                <div class="setting-info">
+                    <span class="setting-title">Clean Project Name</span>
+                    <span class="setting-desc">Remove raw .aep file extension</span>
+                </div>
+                <input type="checkbox" id="toggle-extension" class="switch-input" checked>
+                <span class="switch-slider"></span>
+            </label>
+
+            <label class="setting-item">
+                <div class="setting-info">
+                    <span class="setting-title">Composition Specs</span>
+                    <span class="setting-desc">Display resolution & frame rate</span>
+                </div>
+                <input type="checkbox" id="toggle-specs" class="switch-input" checked>
+                <span class="switch-slider"></span>
+            </label>
+
+            <label class="setting-item">
+                <div class="setting-info">
+                    <span class="setting-title">Composition Duration</span>
+                    <span class="setting-desc">Show length (e.g. 15s, 1:30)</span>
+                </div>
+                <input type="checkbox" id="toggle-duration" class="switch-input" checked>
+                <span class="switch-slider"></span>
+            </label>
+
+            <label class="setting-item">
+                <div class="setting-info">
+                    <span class="setting-title">Smart Layer Count</span>
+                    <span class="setting-desc">Show layer count (hides when 0)</span>
+                </div>
+                <input type="checkbox" id="toggle-layers" class="switch-input" checked>
+                <span class="switch-slider"></span>
+            </label>
+
+            <label class="setting-item">
+                <div class="setting-info">
+                    <span class="setting-title">Detect Rendering Queue</span>
+                    <span class="setting-desc">Auto-show "🚀 Rendering (Item 1/3)"</span>
+                </div>
+                <input type="checkbox" id="toggle-render" class="switch-input" checked>
+                <span class="switch-slider"></span>
+            </label>
+
+            <label class="setting-item">
+                <div class="setting-info">
+                    <span class="setting-title">Privacy / NDA Mode</span>
+                    <span class="setting-desc">Mask project & composition names</span>
+                </div>
+                <input type="checkbox" id="toggle-privacy" class="switch-input">
+                <span class="switch-slider"></span>
+            </label>
+        </section>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <div class="source-code">
+                Free &bull; Open Source by <span class="author-highlight">Jadenaep</span> &bull; <a href="https://github.com/runeveilstudio/xyz.rpcdiscord.ae" id="source-link" target="_blank">Runeveil Studio</a>
+            </div>
+        </footer>
+    </div>
+
+    <script src="../lib/CSInterface.js"></script>
+    <script src="main.js"></script>
+</body>
+
+</html>
