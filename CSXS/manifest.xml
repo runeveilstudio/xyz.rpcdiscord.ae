@@ -33,6 +33,8 @@
 				<ScriptPath>./host/index.jsx</ScriptPath>
 				<CEFCommandLine>
 					<Parameter>--enable-nodejs=false</Parameter>
+					<Parameter>--allow-file-access-from-files</Parameter>
+					<Parameter>--allow-file-access</Parameter>
 				</CEFCommandLine>
 			</Resources>
 
