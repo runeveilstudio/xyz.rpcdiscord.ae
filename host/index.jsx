@@ -196,13 +196,13 @@ function sendCommand(actionName, dataObject) {
                     msg = res.message;
                 } catch (e) {
                     status = "ERROR";
-                    msg = "Malformed response";
+                    msg = "Malformed response: " + e.message;
                 }
             }
         }
     } catch (e) {
         status = "OFFLINE";
-        msg = "Socket error";
+        msg = "Socket error: " + e.message;
     } finally {
         try {
             conn.close();
