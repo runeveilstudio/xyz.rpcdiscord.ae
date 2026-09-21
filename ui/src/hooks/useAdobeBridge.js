@@ -142,9 +142,27 @@ export function useAdobeBridge() {
     }
   }, [sessionSeconds, todaySeconds]);
 
+  // Settings validation helper
+  const validateSettings = useCallback((settings) => {
+    const defaults = {
+      privacyMode: false,
+      useEmojis: false,
+      stripExtension: true,
+      showSpecs: true,
+      showDuration: true,
+      showLayers: true,
+      customStatus: '',
+      detectRender: true,
+      showProjectTime: true,
+      showWorkflow: true,
+      showFormatTag: true
+    };
+    return { ...defaults, ...settings };
+  }, []);
+
   // Settings Payload Constructor
   const getSettingsParam = useCallback(() => {
-    const cur = settingsRef.current;
+    const cur = validateSettings(settingsRef.current);
     const p = rawProjectRef.current;
     const pTime = projectTimesRef.current[p] || 0;
     const timeTag = cur.showProjectTime && pTime >= 60 ? `[${formatReadableTime(pTime)}]` : '';
@@ -164,7 +182,7 @@ export function useAdobeBridge() {
       showFormatTag: cur.showFormatTag
     };
     return JSON.stringify(JSON.stringify(payload));
-  }, []);
+  }, [validateSettings]);
 
   // EvalScript Helper
   const evalScript = useCallback((script, cb) => {
@@ -217,12 +235,12 @@ export function useAdobeBridge() {
         }
         setPreview((prev) => ({
           ...prev,
-          project: info.project || prev.project || 'Unsaved Project',
-          comp: info.comp || prev.comp || 'Comp 1',
-          layers: info.layers || prev.layers || 0,
-          w: info.w || prev.w || 0,
-          h: info.h || prev.h || 0,
-          fps: info.fps || prev.fps || 0,
+          project: info.project != null ? info.project : (prev.project || 'Unsaved Project'),
+          comp: info.comp != null ? info.comp : (prev.comp || 'Comp 1'),
+          layers: info.layers != null ? info.layers : (prev.layers || 0),
+          w: info.w != null ? info.w : (prev.w || 0),
+          h: info.h != null ? info.h : (prev.h || 0),
+          fps: info.fps != null ? info.fps : (prev.fps || 0),
           rendering: !!info.rendering
         }));
 
