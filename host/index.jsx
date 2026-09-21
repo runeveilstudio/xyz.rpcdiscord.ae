@@ -325,7 +325,7 @@ function findActiveComp() {
     // 1. Direct activeItem (works when AE is focused and a comp viewer is open)
     try {
         var ai = app.project.activeItem;
-        if (_isComp(ai)) {
+        if (ai && _isComp(ai)) {
             _rememberActiveComp(ai);
             return ai;
         }
