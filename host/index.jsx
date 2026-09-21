@@ -240,8 +240,8 @@ function _isGenericFallbackCompName(name) {
 function _rememberActiveComp(comp) {
     if (!comp) return;
     try {
-        var incomingName = String(comp.name || "");
-        if (_isGenericFallbackCompName(incomingName)) return;
+        var incomingName = String(comp.name || "").replace(/^\s+|\s+$/g, "");
+        if (!incomingName || _isGenericFallbackCompName(incomingName)) return;
 
         var keepKnownComp = _savedCompName &&
             !_isGenericFallbackCompName(_savedCompName) &&
@@ -417,10 +417,15 @@ function getProjectInfo() {
         }
 
         // Use remembered metadata rather than a transient generic active item.
+        var compNameStr = (comp && comp.name) ? String(comp.name).replace(/^\s+|\s+$/g, "") : "";
         var useSavedComp = comp && _savedCompName &&
             !_isGenericFallbackCompName(_savedCompName) &&
-            _isGenericFallbackCompName(comp.name);
-        var activeName = useSavedComp ? _savedCompName : ((comp && comp.name) ? comp.name : _savedCompName);
+            _isGenericFallbackCompName(compNameStr);
+        // Also use saved if comp is null/undefined but we have a saved name
+        if (!comp && _savedCompName && !_isGenericFallbackCompName(_savedCompName)) {
+            useSavedComp = true;
+        }
+        var activeName = useSavedComp ? _savedCompName : (compNameStr || _savedCompName);
         var activeW = useSavedComp ? _savedCompWidth : (comp ? comp.width : _savedCompWidth);
         var activeH = useSavedComp ? _savedCompHeight : (comp ? comp.height : _savedCompHeight);
         var activeFps = useSavedComp ? _savedCompFps : (comp ? Math.round(comp.frameRate) : _savedCompFps);
@@ -471,7 +476,7 @@ function getProjectInfo() {
         } else if (hasCustom) {
             compName = rawCustom;
         } else {
-            compName = "Comp 1";
+            compName = _savedCompName && !_isGenericFallbackCompName(_savedCompName) ? _savedCompName : "No composition selected";
         }
     } catch (err) {
         _cachedProjectInfo = [projectName, compName];
