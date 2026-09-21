@@ -45,6 +45,7 @@ function updateSettings(settingsJson) {
             if (cfg.showWorkflow !== undefined) currentSettings.showWorkflow = !!cfg.showWorkflow;
             if (cfg.showFormatTag !== undefined) currentSettings.showFormatTag = !!cfg.showFormatTag;
             _lastProjectInfoTime = 0;
+            _cachedProjectInfo = null;
         }
     } catch (e) {}
 }
