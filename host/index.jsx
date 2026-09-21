@@ -246,13 +246,20 @@ function _rememberActiveComp(comp) {
     if (!comp) return;
     try {
         var incomingName = String(comp.name || "").replace(/^\s+|\s+$/g, "");
-        if (!incomingName || _isGenericFallbackCompName(incomingName)) return;
+        if (!incomingName || _isGenericFallbackCompName(incomingName)) {
+            // Debug: log rejected comp names
+            // $.writeln("[RPC] Rejected comp name: " + incomingName);
+            return;
+        }
 
         var keepKnownComp = _savedCompName &&
             !_isGenericFallbackCompName(_savedCompName) &&
             _isGenericFallbackCompName(incomingName);
 
-        if (keepKnownComp) return;
+        if (keepKnownComp) {
+            // $.writeln("[RPC] Keeping known comp: " + _savedCompName);
+            return;
+        }
 
         _cachedActiveComp = comp;
         _savedCompName = incomingName;
@@ -260,7 +267,10 @@ function _rememberActiveComp(comp) {
         _savedCompHeight = comp.height;
         _savedCompFps = Math.round(comp.frameRate);
         _savedCompDuration = comp.duration;
-    } catch (e) {}
+        // $.writeln("[RPC] Cached new active comp: " + incomingName);
+    } catch (e) {
+        // $.writeln("[RPC] Error in _rememberActiveComp: " + e.message);
+    }
 }
 
 function _isComp(it) {
