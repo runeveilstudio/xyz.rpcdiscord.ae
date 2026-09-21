@@ -230,6 +230,34 @@ var _savedCompHeight = 0;
 var _savedCompFps = 0;
 var _savedCompDuration = 0;
 
+// AE can temporarily report the first project item as the active item after
+// the CEP panel takes focus.  In many projects that item is the default
+// "Comp 1", which must not replace a comp we have already identified.
+function _isGenericFallbackCompName(name) {
+    return String(name || "").replace(/^\s+|\s+$/g, "") === "Comp 1";
+}
+
+function _rememberActiveComp(comp) {
+    if (!comp) return;
+    try {
+        var incomingName = String(comp.name || "");
+        if (_isGenericFallbackCompName(incomingName)) return;
+
+        var keepKnownComp = _savedCompName &&
+            !_isGenericFallbackCompName(_savedCompName) &&
+            _isGenericFallbackCompName(incomingName);
+
+        if (keepKnownComp) return;
+
+        _cachedActiveComp = comp;
+        _savedCompName = incomingName;
+        _savedCompWidth = comp.width;
+        _savedCompHeight = comp.height;
+        _savedCompFps = Math.round(comp.frameRate);
+        _savedCompDuration = comp.duration;
+    } catch (e) {}
+}
+
 function _isComp(it) {
     if (!it) return false;
     try {
@@ -259,73 +287,53 @@ function _isCompValid(c) {
 function findActiveComp() {
     if (!app.project) return null;
 
-    // 1. Direct activeItem
+    // 1. Direct activeItem (works when AE is focused and a comp viewer is open)
     try {
         var ai = app.project.activeItem;
         if (_isComp(ai)) {
-            _cachedActiveComp = ai;
-            _savedCompName = ai.name;
-            _savedCompWidth = ai.width;
-            _savedCompHeight = ai.height;
-            _savedCompFps = Math.round(ai.frameRate);
-            _savedCompDuration = ai.duration;
+            _rememberActiveComp(ai);
             return ai;
         }
     } catch (e) {}
 
-    // 2. Previously cached comp
+    // 2. Try the active viewer panel (works even when AE is in the background)
     try {
-        if (_cachedActiveComp && _isCompValid(_cachedActiveComp)) {
-            return _cachedActiveComp;
+        var viewer = app.activeViewer;
+        if (viewer && viewer.type === ViewerType.VIEWER_COMPOSITION) {
+            var viewComp = viewer.view.options.zoom;
+            // viewer.view is a CompView — get the comp from the parent item
+            // In ExtendScript, app.project.activeItem still reflects the last focused comp
+            // so we fall through; but we can check the viewer source:
+            var src = viewer.source;
+            if (src && _isComp(src)) {
+                _rememberActiveComp(src);
+                return src;
+            }
         }
     } catch (e) {}
 
-    // 3. Any selected comp in the project panel
+    // 4. Any selected comp in the project panel
     try {
         var sel = app.project.selection;
         if (sel && sel.length > 0) {
             for (var s = 0; s < sel.length; s++) {
                 if (_isComp(sel[s])) {
-                    _cachedActiveComp = sel[s];
-                    _savedCompName = sel[s].name;
-                    _savedCompWidth = sel[s].width;
-                    _savedCompHeight = sel[s].height;
-                    _savedCompFps = Math.round(sel[s].frameRate);
-                    _savedCompDuration = sel[s].duration;
+                    _rememberActiveComp(sel[s]);
                     return sel[s];
                 }
             }
         }
     } catch (e) {}
 
-    // 4. Any composition in the project items (bounded to max 30 items to prevent UI freeze)
-    try {
-        var num = app.project.numItems;
-        if (num && num > 0) {
-            var scanLimit = num > 30 ? 30 : num;
-            for (var i = 1; i <= scanLimit; i++) {
-                var it = app.project.item(i);
-                if (_isComp(it)) {
-                    _cachedActiveComp = it;
-                    if (!_savedCompName || _savedCompName.length === 0) {
-                        _savedCompName = it.name;
-                        _savedCompWidth = it.width;
-                        _savedCompHeight = it.height;
-                        _savedCompFps = Math.round(it.frameRate);
-                        _savedCompDuration = it.duration;
-                    }
-                    return it;
-                }
-            }
-        }
-    } catch (e) {}
-
+    // NOTE: Removed "scan all project items" fallback — it always returned Comp 1
+    // (the first comp in the project), making the display stuck on that name.
+    // If we have saved metadata, return null and let the caller use _savedCompName.
     return null;
 }
 
 function getProjectInfo() {
     var now = (new Date()).getTime();
-    if (_cachedProjectInfo && (now - _lastProjectInfoTime < 1200)) {
+    if (_cachedProjectInfo && (now - _lastProjectInfoTime < 500)) {
         return _cachedProjectInfo;
     }
 
@@ -405,20 +413,18 @@ function getProjectInfo() {
         var hasCustom = rawCustom.length > 0;
 
         if (comp) {
-            try {
-                _savedCompName = comp.name;
-                _savedCompWidth = comp.width;
-                _savedCompHeight = comp.height;
-                _savedCompFps = Math.round(comp.frameRate);
-                _savedCompDuration = comp.duration;
-            } catch (e) {}
+            _rememberActiveComp(comp);
         }
 
-        var activeName = (comp && comp.name) ? comp.name : _savedCompName;
-        var activeW = comp ? comp.width : _savedCompWidth;
-        var activeH = comp ? comp.height : _savedCompHeight;
-        var activeFps = comp ? Math.round(comp.frameRate) : _savedCompFps;
-        var activeDur = comp ? comp.duration : _savedCompDuration;
+        // Use remembered metadata rather than a transient generic active item.
+        var useSavedComp = comp && _savedCompName &&
+            !_isGenericFallbackCompName(_savedCompName) &&
+            _isGenericFallbackCompName(comp.name);
+        var activeName = useSavedComp ? _savedCompName : ((comp && comp.name) ? comp.name : _savedCompName);
+        var activeW = useSavedComp ? _savedCompWidth : (comp ? comp.width : _savedCompWidth);
+        var activeH = useSavedComp ? _savedCompHeight : (comp ? comp.height : _savedCompHeight);
+        var activeFps = useSavedComp ? _savedCompFps : (comp ? Math.round(comp.frameRate) : _savedCompFps);
+        var activeDur = useSavedComp ? _savedCompDuration : (comp ? comp.duration : _savedCompDuration);
 
         if (activeName && activeName.length > 0) {
             var parts = [];
