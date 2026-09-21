@@ -233,8 +233,13 @@ var _savedCompDuration = 0;
 // AE can temporarily report the first project item as the active item after
 // the CEP panel takes focus.  In many projects that item is the default
 // "Comp 1", which must not replace a comp we have already identified.
+/**
+ * Checks if a composition name is a generic fallback name that AE reports
+ * when the CEP panel takes focus (e.g., "Comp 1", "Comp 2", etc.)
+ */
 function _isGenericFallbackCompName(name) {
-    return String(name || "").replace(/^\s+|\s+$/g, "") === "Comp 1";
+    var trimmed = String(name || "").replace(/^\s+|\s+$/g, "");
+    return trimmed === "Comp 1" || trimmed === "Comp 2" || /^Comp \d+$/.test(trimmed);
 }
 
 function _rememberActiveComp(comp) {
