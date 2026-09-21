@@ -6,6 +6,9 @@
  * https://github.com/runeveilstudio/xyz.rpcdiscord.ae
  */
 
+var EXTENSION_VERSION = "1.2.0";
+var EXTENSION_NAME = "xyz.rpcdiscord.ae";
+
 var currentSettings = {
     privacyMode: false,
     useEmojis: true,
@@ -216,9 +219,25 @@ function sendCommand(actionName, dataObject) {
 function getBridgeStatus(settingsJson) {
     if (settingsJson) updateSettings(settingsJson);
     var info = getProjectInfo();
-    return sendCommand("STATUS", {
+    var result = sendCommand("STATUS", {
         project: info[0],
         comp: info[1]
+    });
+    try {
+        var parsed = eval("(" + result + ")");
+        parsed.version = EXTENSION_VERSION;
+        parsed.name = EXTENSION_NAME;
+        return JSON.stringify(parsed);
+    } catch (e) {
+        return result;
+    }
+}
+
+// Get version info for debugging
+function getVersionInfo() {
+    return JSON.stringify({
+        version: EXTENSION_VERSION,
+        name: EXTENSION_NAME
     });
 }
 
