@@ -7,7 +7,7 @@ export default defineConfig({
   base: './',
   root: path.resolve(__dirname, 'ui'),
   build: {
-    outDir: path.resolve(__dirname, 'repo/client'),
-    emptyOutDir: true,
+    outDir: path.resolve(__dirname, 'client'),
+    emptyOutDir: false,
   },
 });

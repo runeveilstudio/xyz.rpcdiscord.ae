@@ -21,6 +21,9 @@ var currentSettings = {
     showFormatTag: true
 };
 
+var _lastProjectInfoTime = 0;
+var _cachedProjectInfo = null;
+
 function updateSettings(settingsJson) {
     if (!settingsJson) return;
     try {
@@ -38,6 +41,7 @@ function updateSettings(settingsJson) {
             if (cfg.projectTimeStr !== undefined) currentSettings.projectTimeStr = String(cfg.projectTimeStr);
             if (cfg.showWorkflow !== undefined) currentSettings.showWorkflow = !!cfg.showWorkflow;
             if (cfg.showFormatTag !== undefined) currentSettings.showFormatTag = !!cfg.showFormatTag;
+            _lastProjectInfoTime = 0;
         }
     } catch (e) {}
 }
@@ -158,8 +162,20 @@ function sendCommand(actionName, dataObject) {
     var p = "";
     var c = "";
     if (dataObject) {
-        if (dataObject.project) p = String(dataObject.project).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-        if (dataObject.comp) c = String(dataObject.comp).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+        if (dataObject.project) {
+            p = String(dataObject.project)
+                .replace(/\\/g, '\\\\')
+                .replace(/"/g, '\\"')
+                .replace(/\r/g, '')
+                .replace(/\n/g, ' ');
+        }
+        if (dataObject.comp) {
+            c = String(dataObject.comp)
+                .replace(/\\/g, '\\\\')
+                .replace(/"/g, '\\"')
+                .replace(/\r/g, '')
+                .replace(/\n/g, ' ');
+        }
     }
 
     var payload = '{"action":"' + actionName + '","data":{"project":"' + p + '","comp":"' + c + '"}}\n';
@@ -173,8 +189,6 @@ function sendCommand(actionName, dataObject) {
         if (conn.open("127.0.0.1:54345", "UTF-8")) {
             conn.write(payload);
             var raw = conn.readln();
-            conn.close();
-
             if (raw && raw.length > 0) {
                 try {
                     var res = eval("(" + raw + ")");
@@ -189,6 +203,10 @@ function sendCommand(actionName, dataObject) {
     } catch (e) {
         status = "OFFLINE";
         msg = "Socket error";
+    } finally {
+        try {
+            conn.close();
+        } catch (e) {}
     }
 
     var safeMsg = String(msg).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r');
@@ -280,11 +298,12 @@ function findActiveComp() {
         }
     } catch (e) {}
 
-    // 4. Any composition in the project items
+    // 4. Any composition in the project items (bounded to max 30 items to prevent UI freeze)
     try {
         var num = app.project.numItems;
         if (num && num > 0) {
-            for (var i = 1; i <= num; i++) {
+            var scanLimit = num > 30 ? 30 : num;
+            for (var i = 1; i <= scanLimit; i++) {
                 var it = app.project.item(i);
                 if (_isComp(it)) {
                     _cachedActiveComp = it;
@@ -305,6 +324,11 @@ function findActiveComp() {
 }
 
 function getProjectInfo() {
+    var now = (new Date()).getTime();
+    if (_cachedProjectInfo && (now - _lastProjectInfoTime < 1200)) {
+        return _cachedProjectInfo;
+    }
+
     var projectName = "Unsaved Project";
     var compName = "Comp 1";
 
@@ -341,7 +365,9 @@ function getProjectInfo() {
                 } else {
                     target = "Active Queue Item";
                 }
-                return [title, target];
+                _cachedProjectInfo = [title, target];
+                _lastProjectInfoTime = now;
+                return _cachedProjectInfo;
             }
         }
 
@@ -349,7 +375,9 @@ function getProjectInfo() {
         if (currentSettings.privacyMode) {
             var privProj = currentSettings.useEmojis ? "🔒 Confidential Project" : "Confidential Project";
             var privComp = currentSettings.useEmojis ? "🔒 Private Composition" : "Private Composition";
-            return [privProj, privComp];
+            _cachedProjectInfo = [privProj, privComp];
+            _lastProjectInfoTime = now;
+            return _cachedProjectInfo;
         }
 
         // Active project file
@@ -386,40 +414,17 @@ function getProjectInfo() {
             } catch (e) {}
         }
 
-        var activeName = _savedCompName;
-        var activeW = _savedCompWidth;
-        var activeH = _savedCompHeight;
-        var activeFps = _savedCompFps;
-        var activeDur = _savedCompDuration;
-
-        if (!activeName || activeName.length === 0) {
-            try {
-                if (app.project && app.project.numItems > 0) {
-                    for (var j = 1; j <= app.project.numItems; j++) {
-                        var pi = app.project.item(j);
-                        if (_isComp(pi)) {
-                            activeName = pi.name;
-                            activeW = pi.width;
-                            activeH = pi.height;
-                            activeFps = Math.round(pi.frameRate);
-                            activeDur = pi.duration;
-                            _savedCompName = activeName;
-                            _savedCompWidth = activeW;
-                            _savedCompHeight = activeH;
-                            _savedCompFps = activeFps;
-                            _savedCompDuration = activeDur;
-                            break;
-                        }
-                    }
-                }
-            } catch (e) {}
-        }
+        var activeName = (comp && comp.name) ? comp.name : _savedCompName;
+        var activeW = comp ? comp.width : _savedCompWidth;
+        var activeH = comp ? comp.height : _savedCompHeight;
+        var activeFps = comp ? Math.round(comp.frameRate) : _savedCompFps;
+        var activeDur = comp ? comp.duration : _savedCompDuration;
 
         if (activeName && activeName.length > 0) {
             var parts = [];
 
             // Comp size and frame rate (e.g. 1080x1920 @ 60fps)
-            if (activeW > 0 && activeH > 0) {
+            if (currentSettings.showSpecs && activeW > 0 && activeH > 0) {
                 var resStr = activeW + "x" + activeH;
                 if (activeFps > 0) {
                     resStr += " @ " + activeFps + "fps";
@@ -428,9 +433,27 @@ function getProjectInfo() {
             }
 
             // Duration (e.g. 0:30)
-            if (activeDur > 0) {
+            if (currentSettings.showDuration && activeDur > 0) {
                 var dur = formatDuration(activeDur);
                 if (dur && dur !== "0:00") parts.push(dur);
+            }
+
+            // Format Tag (e.g. 9:16, 4K, 1080p)
+            if (currentSettings.showFormatTag && activeW > 0 && activeH > 0) {
+                var fTag = getFormatTag(activeW, activeH, currentSettings.useEmojis);
+                if (fTag) parts.push(fTag);
+            }
+
+            // Workflow Tag (e.g. 3D Scene, Typography, Motion Design)
+            if (currentSettings.showWorkflow && comp) {
+                var wTag = detectWorkflow(comp, currentSettings.useEmojis);
+                if (wTag) parts.push(wTag);
+            }
+
+            // Layers (e.g. 24 layers)
+            if (currentSettings.showLayers && comp && comp.numLayers > 0) {
+                var layerStr = comp.numLayers + (currentSettings.useEmojis ? " 📑" : " layers");
+                parts.push(layerStr);
             }
 
             // Optional custom status / preset if selected
@@ -445,10 +468,14 @@ function getProjectInfo() {
             compName = "Comp 1";
         }
     } catch (err) {
-        return [projectName, compName];
+        _cachedProjectInfo = [projectName, compName];
+        _lastProjectInfoTime = now;
+        return _cachedProjectInfo;
     }
 
-    return [projectName, compName];
+    _cachedProjectInfo = [projectName, compName];
+    _lastProjectInfoTime = now;
+    return _cachedProjectInfo;
 }
 
 function getCurrentPresencePreview(settingsJson) {

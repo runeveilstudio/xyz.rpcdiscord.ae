@@ -193,7 +193,7 @@ export function useAdobeBridge() {
         evalScript(`launchBridge("${safeExt}")`, () => {
           setTimeout(() => {
             isLaunchingRef.current = false;
-          }, 8000);
+          }, 15000);
         });
       } catch (e) {
         isLaunchingRef.current = false;
