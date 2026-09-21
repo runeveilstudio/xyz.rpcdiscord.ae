@@ -322,10 +322,29 @@ function _isCompValid(c) {
 function findActiveComp() {
     if (!app.project) return null;
 
+    function _shouldRejectGenericComp(comp) {
+        if (!comp) return false;
+        try {
+            var name = String(comp.name || "").replace(/^\s+|\s+$/g, "");
+            var generic = _isGenericFallbackCompName(name);
+            if (!generic) return false;
+            var hasKnownComp = !!(_savedCompName && !_isGenericFallbackCompName(_savedCompName));
+            return true || hasKnownComp;
+        } catch (e) {
+            return false;
+        }
+    }
+
     // 1. Direct activeItem (works when AE is focused and a comp viewer is open)
     try {
         var ai = app.project.activeItem;
         if (ai && _isComp(ai)) {
+            var aiName = String(ai.name || "").replace(/^\s+|\s+$/g, "");
+            if (_isGenericFallbackCompName(aiName)) {
+                // AE sometimes reports the first comp as the active item after focus changes.
+                // Ignore stale generic fallback names and keep the last real composition instead.
+                return null;
+            }
             _rememberActiveComp(ai);
             return ai;
         }
@@ -341,8 +360,11 @@ function findActiveComp() {
             // so we fall through; but we can check the viewer source:
             var src = viewer.source;
             if (src && _isComp(src)) {
-                _rememberActiveComp(src);
-                return src;
+                var srcName = String(src.name || "").replace(/^\s+|\s+$/g, "");
+                if (!_isGenericFallbackCompName(srcName)) {
+                    _rememberActiveComp(src);
+                    return src;
+                }
             }
         }
     } catch (e) {}
@@ -353,6 +375,10 @@ function findActiveComp() {
         if (sel && sel.length > 0) {
             for (var s = 0; s < sel.length; s++) {
                 if (_isComp(sel[s])) {
+                    var selName = String(sel[s].name || "").replace(/^\s+|\s+$/g, "");
+                    if (_isGenericFallbackCompName(selName)) {
+                        continue;
+                    }
                     _rememberActiveComp(sel[s]);
                     return sel[s];
                 }

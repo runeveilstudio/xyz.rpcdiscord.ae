@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { validateSettings, buildPresencePayload } from '../lib/presenceSettings';
 
 export function useAdobeBridge() {
   const csRef = useRef(null);
@@ -29,35 +30,10 @@ export function useAdobeBridge() {
     try {
       const saved = localStorage.getItem('runeveil_ae_rpc_settings');
       if (saved) {
-        return {
-          privacyMode: false,
-          useEmojis: false,
-          stripExtension: true,
-          showSpecs: true,
-          showDuration: true,
-          showLayers: true,
-          customStatus: '',
-          detectRender: true,
-          showProjectTime: true,
-          showWorkflow: true,
-          showFormatTag: true,
-          ...JSON.parse(saved)
-        };
+        return validateSettings(JSON.parse(saved));
       }
     } catch (e) {}
-    return {
-      privacyMode: false,
-      useEmojis: false,
-      stripExtension: true,
-      showSpecs: true,
-      showDuration: true,
-      showLayers: true,
-      customStatus: '',
-      detectRender: true,
-      showProjectTime: true,
-      showWorkflow: true,
-      showFormatTag: true
-    };
+    return validateSettings();
   });
 
   const settingsRef = useRef(settings);
@@ -69,7 +45,8 @@ export function useAdobeBridge() {
   useEffect(() => {
     if (typeof window !== 'undefined' && window.CSInterface) {
       try {
-        csRef.current = new window.CSInterface();
+        const csInterface = new window.CSInterface();
+        csRef.current = csInterface;
       } catch (e) {
         console.warn('CSInterface init warning:', e);
       }
@@ -143,23 +120,6 @@ export function useAdobeBridge() {
   }, [sessionSeconds, todaySeconds]);
 
   // Settings validation helper
-  const validateSettings = useCallback((settings) => {
-    const defaults = {
-      privacyMode: false,
-      useEmojis: false,
-      stripExtension: true,
-      showSpecs: true,
-      showDuration: true,
-      showLayers: true,
-      customStatus: '',
-      detectRender: true,
-      showProjectTime: true,
-      showWorkflow: true,
-      showFormatTag: true
-    };
-    return { ...defaults, ...settings };
-  }, []);
-
   // Settings Payload Constructor
   const getSettingsParam = useCallback(() => {
     const cur = validateSettings(settingsRef.current);
@@ -167,22 +127,13 @@ export function useAdobeBridge() {
     const pTime = projectTimesRef.current[p] || 0;
     const timeTag = cur.showProjectTime && pTime >= 60 ? `[${formatReadableTime(pTime)}]` : '';
 
-    const payload = {
-      privacyMode: cur.privacyMode,
-      useEmojis: false,
-      stripExtension: cur.stripExtension,
-      showSpecs: cur.showSpecs,
-      showDuration: cur.showDuration,
-      showLayers: cur.showLayers,
-      customStatus: cur.customStatus,
-      detectRender: cur.detectRender,
-      showProjectTime: cur.showProjectTime,
-      projectTimeStr: timeTag,
-      showWorkflow: cur.showWorkflow,
-      showFormatTag: cur.showFormatTag
-    };
+    const payload = buildPresencePayload({
+      ...cur,
+      projectTimeStr: timeTag
+    }, p || 'Unsaved Project');
+
     return JSON.stringify(JSON.stringify(payload));
-  }, [validateSettings]);
+  }, []);
 
   // EvalScript Helper
   const evalScript = useCallback((script, cb) => {
@@ -204,10 +155,16 @@ export function useAdobeBridge() {
     setStatus('connecting');
     setStatusMessage('Connecting...');
 
-    if (csRef.current && window.SystemPath) {
+    if (csRef.current && typeof window !== 'undefined' && window.SystemPath) {
       try {
         const extPath = csRef.current.getSystemPath(window.SystemPath.EXTENSION);
-        const safeExt = extPath.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+        if (!extPath) {
+          isLaunchingRef.current = false;
+          setStatus('disconnected');
+          setStatusMessage('Bridge not available');
+          return;
+        }
+        const safeExt = String(extPath).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
         evalScript(`launchBridge("${safeExt}")`, () => {
           setTimeout(() => {
             isLaunchingRef.current = false;
@@ -215,9 +172,13 @@ export function useAdobeBridge() {
         });
       } catch (e) {
         isLaunchingRef.current = false;
+        setStatus('disconnected');
+        setStatusMessage('Bridge not available');
       }
     } else {
       isLaunchingRef.current = false;
+      setStatus('disconnected');
+      setStatusMessage('Bridge not available');
     }
   }, [evalScript]);
 
@@ -292,6 +253,12 @@ export function useAdobeBridge() {
 
   // Connect / Disconnect Action
   const toggleConnection = useCallback(() => {
+    if (!csRef.current) {
+      setStatus('disconnected');
+      setStatusMessage('Bridge not available');
+      return;
+    }
+
     const params = getSettingsParam();
     if (status === 'connected' || status === 'rendering') {
       evalScript('disconnectDiscord()', () => {
