@@ -267,9 +267,25 @@ export function useAdobeBridge() {
     } else {
       setStatus('connecting');
       setStatusMessage('Connecting...');
-      evalScript(`connectToDiscord(${params})`, () => {
-        updateStatus();
-      });
+      if (csRef.current && typeof window !== 'undefined' && window.SystemPath) {
+        try {
+          const extPath = csRef.current.getSystemPath(window.SystemPath.EXTENSION);
+          const safeExt = extPath
+            ? String(extPath).replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+            : '';
+          evalScript(`connectToDiscord(${params}, "${safeExt}")`, () => {
+            updateStatus();
+          });
+        } catch (e) {
+          evalScript(`connectToDiscord(${params})`, () => {
+            updateStatus();
+          });
+        }
+      } else {
+        evalScript(`connectToDiscord(${params})`, () => {
+          updateStatus();
+        });
+      }
     }
   }, [evalScript, getSettingsParam, status, updateStatus]);
 

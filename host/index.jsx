@@ -6,7 +6,7 @@
  * https://github.com/runeveilstudio/xyz.rpcdiscord.ae
  */
 
-var EXTENSION_VERSION = "1.2.0";
+var EXTENSION_VERSION = "2.0.0";
 var EXTENSION_NAME = "xyz.rpcdiscord.ae";
 
 var currentSettings = {
@@ -30,7 +30,7 @@ var _cachedProjectInfo = null;
 function updateSettings(settingsJson) {
     if (!settingsJson) return;
     try {
-        var cfg = eval("(" + settingsJson + ")");
+        var cfg = JSON.parse(settingsJson);
         if (typeof cfg === "object" && cfg !== null) {
             if (cfg.privacyMode !== undefined) currentSettings.privacyMode = !!cfg.privacyMode;
             if (cfg.useEmojis !== undefined) currentSettings.useEmojis = !!cfg.useEmojis;
@@ -195,7 +195,7 @@ function sendCommand(actionName, dataObject) {
             var raw = conn.readln();
             if (raw && raw.length > 0) {
                 try {
-                    var res = eval("(" + raw + ")");
+                    var res = JSON.parse(raw);
                     status = res.status;
                     msg = res.message;
                 } catch (e) {
@@ -225,7 +225,7 @@ function getBridgeStatus(settingsJson) {
         comp: info[1]
     });
     try {
-        var parsed = eval("(" + result + ")");
+        var parsed = JSON.parse(result);
         parsed.version = EXTENSION_VERSION;
         parsed.name = EXTENSION_NAME;
         return JSON.stringify(parsed);
@@ -335,6 +335,7 @@ function findActiveComp() {
                     return _cachedActiveComp;
                 }
             }
+            if (isGeneric) return null;
             return ai;
         }
     } catch (e) {}
@@ -343,14 +344,15 @@ function findActiveComp() {
     try {
         var viewer = app.activeViewer;
         if (viewer && viewer.type === ViewerType.VIEWER_COMPOSITION) {
-            var viewComp = viewer.view.options.zoom;
-            // viewer.view is a CompView — get the comp from the parent item
-            // In ExtendScript, app.project.activeItem still reflects the last focused comp
-            // so we fall through; but we can check the viewer source:
-            var src = viewer.source;
-            if (src && _isComp(src)) {
-                _rememberActiveComp(src, "viewer");
-                return src;
+            // In ExtendScript, activeItem reflects the comp open in the viewer
+            // even when the panel itself doesn't have keyboard focus.
+            var viewerItem = app.project.activeItem;
+            if (viewerItem && _isComp(viewerItem)) {
+                var viewerName = String(viewerItem.name || "").replace(/^\s+|\s+$/g, "");
+                if (!_isGenericFallbackCompName(viewerName)) {
+                    _rememberActiveComp(viewerItem, "viewer");
+                    return viewerItem;
+                }
             }
         }
     } catch (e) {}
@@ -580,8 +582,6 @@ function connectToDiscord(settingsJson, extPath) {
     if (settingsJson) updateSettings(settingsJson);
     if (extPath) launchBridge(extPath);
     var info = getProjectInfo();
-    if (info[0] === -1 && info[1] === -1) return;
-
     return sendCommand("UPDATE_PRESENCE", {
         project: info[0],
         comp: info[1]
