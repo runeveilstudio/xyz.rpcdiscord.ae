@@ -335,6 +335,25 @@ function findActiveComp() {
                     return _cachedActiveComp;
                 }
             }
+            // A generic name is still valid when AE confirms this is the
+            // composition the user selected or opened in a composition viewer.
+            if (isGeneric) {
+                try {
+                    if (app.activeViewer && app.activeViewer.type === ViewerType.VIEWER_COMPOSITION) {
+                        _rememberActiveComp(ai, "viewer");
+                        return ai;
+                    }
+                } catch (e) {}
+                try {
+                    var activeSelection = app.project.selection;
+                    for (var selectedIndex = 0; selectedIndex < activeSelection.length; selectedIndex++) {
+                        if (activeSelection[selectedIndex] === ai) {
+                            _rememberActiveComp(ai, "selection");
+                            return ai;
+                        }
+                    }
+                } catch (e) {}
+            }
             if (!isGeneric) return ai;
         }
     } catch (e) {}

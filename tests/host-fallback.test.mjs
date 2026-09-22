@@ -12,7 +12,7 @@ test('findActiveComp rejects generic Comp 1 fallback when AE reports it as the a
     app: {
       project: {
         activeItem: { name: 'Comp 1', numLayers: 3, width: 1920, height: 1080, frameRate: 24, duration: 10 },
-        selection: [{ name: 'Comp 1', numLayers: 3, width: 1920, height: 1080, frameRate: 24, duration: 10 }],
+        selection: [],
       },
       activeViewer: null,
     },
@@ -36,4 +36,32 @@ test('findActiveComp rejects generic Comp 1 fallback when AE reports it as the a
 
   const result = context.findActiveComp();
   assert.equal(result, null);
+});
+
+test('findActiveComp accepts a generic-named composition when it is selected', () => {
+  const composition = { name: 'Comp 1', numLayers: 3, width: 1920, height: 1080, frameRate: 24, duration: 10 };
+  const context = {
+    app: {
+      project: { activeItem: composition, selection: [composition] },
+      activeViewer: null,
+    },
+    ViewerType: { VIEWER_COMPOSITION: 1 },
+    Date,
+    Math,
+    String,
+    JSON,
+    RegExp,
+    Number,
+    Object,
+    Array,
+    Boolean,
+    parseInt,
+    isNaN,
+    File: function () { return { exists: false, execute() {} }; },
+    Socket: function () { return { timeout: 0, open() { return false; }, write() {}, readln() { return ''; }, close() {} }; },
+  };
+
+  vm.runInNewContext(hostSource, context);
+
+  assert.equal(context.findActiveComp(), composition);
 });
