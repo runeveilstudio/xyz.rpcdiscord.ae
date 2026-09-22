@@ -1,16 +1,28 @@
+<!-- // Created by Oliver. (c) 2026. All rights reserved.
+// https://github.com/harpoonwithaz/ae-discord-rpc -->
+
 <!DOCTYPE html>
-<html lang="en" data-theme="dark" class="dark">
+<html>
+
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>After Effects Discord RPC</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <meta charset="utf-8">
+    <title>Discord RPC Test</title>
+    <link rel="stylesheet" href="style.css">
 </head>
-<body class="penumbra-dark">
-  <div id="root"></div>
-  <script src="../lib/CSInterface.js" defer></script>
-  <script src="./assets/app.js" defer></script>
+
+<body>
+    <div class="divider">Status: <span id="status">Disconnected</span></div>
+
+    <div id="controls">
+        <button id="refresh-btn">Refresh</button>
+        <button id="connect-btn">Try Connect</button>
+    </div>
+    <div class="source-code">
+        Made by: <a href="https://github.com/harpoonwithaz/ae-discord-rpc" id="source-link">harpoonwithaz</a>
+    </div>
+
+    <script src="../lib/CSInterface.js"></script>
+    <script src="main.js"></script>
 </body>
+
 </html>
