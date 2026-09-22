@@ -6,27 +6,34 @@ import path from 'node:path';
 
 const hostSource = fs.readFileSync(path.resolve('host/index.jsx'), 'utf8');
 
-test('sendCommand returns offline JSON when the bridge socket fails', () => {
-    const context = {
-      JSON,
-      String,
-      File: function () {},
-      CompItem: function () {},
-      alert() {},
-      app: { project: null },
-      Socket: function () {
-        this.open = () => { throw new Error('offline'); };
-        this.close = () => {};
+test('findActiveComp rejects generic Comp 1 fallback when AE reports it as the active item', () => {
+  const context = {
+    console,
+    app: {
+      project: {
+        activeItem: { name: 'Comp 1', numLayers: 3, width: 1920, height: 1080, frameRate: 24, duration: 10 },
+        selection: [{ name: 'Comp 1', numLayers: 3, width: 1920, height: 1080, frameRate: 24, duration: 10 }],
       },
-    };
+      activeViewer: null,
+    },
+    ViewerType: { VIEWER_COMPOSITION: 1 },
+    Date,
+    Math,
+    String,
+    JSON,
+    RegExp,
+    Number,
+    Object,
+    Array,
+    Boolean,
+    parseInt,
+    isNaN,
+    File: function () { return { exists: false, execute() {} }; },
+    Socket: function () { return { timeout: 0, open() { return false; }, write() {}, readln() { return ''; }, close() {} }; },
+  };
 
-    vm.runInNewContext(hostSource, context);
+  vm.runInNewContext(hostSource, context);
 
-    const result = JSON.parse(context.sendCommand('STATUS', {
-      project: 'Demo',
-      comp: 'Comp 1',
-    }));
-
-    assert.equal(result.status, 'OFFLINE');
-    assert.equal(result.message, 'Connection failed');
-  });
+  const result = context.findActiveComp();
+  assert.equal(result, null);
+});

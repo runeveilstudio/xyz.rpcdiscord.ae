@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ExtensionManifest
 	Version="8.0"
-	ExtensionBundleId="com.ae.discordrpc"
+	ExtensionBundleId="xyz.rpcdiscord.ae"
 	ExtensionBundleVersion="2.0.0"
-	ExtensionBundleName="AE Discord RPC"
+	ExtensionBundleName="AE Discord RPC - Runeveil Studio"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 
 	<ExtensionList>
-		<Extension Id="com.ae.discordrpc.panel" Version="1.0" />
+		<Extension Id="xyz.rpcdiscord.ae.panel" Version="1.0" />
 	</ExtensionList>
 
 	<ExecutionEnvironment>
@@ -25,7 +25,7 @@
 </ExecutionEnvironment>
 
 	<DispatchInfoList>
-		<Extension Id="com.ae.discordrpc.panel">
+		<Extension Id="xyz.rpcdiscord.ae.panel">
 			<DispatchInfo>
 
 			<Resources>
@@ -33,6 +33,8 @@
 				<ScriptPath>./host/index.jsx</ScriptPath>
 				<CEFCommandLine>
 					<Parameter>--enable-nodejs=false</Parameter>
+					<Parameter>--allow-file-access-from-files</Parameter>
+					<Parameter>--allow-file-access</Parameter>
 				</CEFCommandLine>
 			</Resources>
 
@@ -45,9 +47,17 @@
 				<Menu>Discord Status</Menu>
 				<Geometry>
 					<Size>
-						<Height>400</Height>
-						<Width>300</Width>
+						<Height>480</Height>
+						<Width>320</Width>
 					</Size>
+					<MinSize>
+						<Height>260</Height>
+						<Width>220</Width>
+					</MinSize>
+					<MaxSize>
+						<Height>900</Height>
+						<Width>800</Width>
+					</MaxSize>
 				</Geometry>
 			</UI>
 		</DispatchInfo>
