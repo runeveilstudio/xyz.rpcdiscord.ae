@@ -262,13 +262,15 @@ function _isGenericFallbackCompName(name) {
     return trimmed === "Comp 1" || trimmed === "Comp 2" || /^Comp \d+$/.test(trimmed);
 }
 
-function _rememberActiveComp(comp) {
+function _rememberActiveComp(comp, source) {
     if (!comp) return;
     try {
         var incomingName = String(comp.name || "").replace(/^\s+|\s+$/g, "");
-        if (!incomingName || _isGenericFallbackCompName(incomingName)) {
-            // Debug: log rejected comp names
-            // $.writeln("[RPC] Rejected comp name: " + incomingName);
+        
+        // Only reject generic names from activeItem (panel focus), not from user selection/viewer
+        var isFromActiveItem = (source === "activeItem");
+        if (isFromActiveItem && _isGenericFallbackCompName(incomingName) && !_savedCompName) {
+            // First load: panel focus makes activeItem = "Comp 1", don't cache it
             return;
         }
 
@@ -277,7 +279,6 @@ function _rememberActiveComp(comp) {
             _isGenericFallbackCompName(incomingName);
 
         if (keepKnownComp) {
-            // $.writeln("[RPC] Keeping known comp: " + _savedCompName);
             return;
         }
 
@@ -287,10 +288,7 @@ function _rememberActiveComp(comp) {
         _savedCompHeight = comp.height;
         _savedCompFps = Math.round(comp.frameRate);
         _savedCompDuration = comp.duration;
-        // $.writeln("[RPC] Cached new active comp: " + incomingName);
-    } catch (e) {
-        // $.writeln("[RPC] Error in _rememberActiveComp: " + e.message);
-    }
+    } catch (e) {}
 }
 
 function _isComp(it) {
@@ -322,30 +320,11 @@ function _isCompValid(c) {
 function findActiveComp() {
     if (!app.project) return null;
 
-    function _shouldRejectGenericComp(comp) {
-        if (!comp) return false;
-        try {
-            var name = String(comp.name || "").replace(/^\s+|\s+$/g, "");
-            var generic = _isGenericFallbackCompName(name);
-            if (!generic) return false;
-            var hasKnownComp = !!(_savedCompName && !_isGenericFallbackCompName(_savedCompName));
-            return true || hasKnownComp;
-        } catch (e) {
-            return false;
-        }
-    }
-
     // 1. Direct activeItem (works when AE is focused and a comp viewer is open)
     try {
         var ai = app.project.activeItem;
         if (ai && _isComp(ai)) {
-            var aiName = String(ai.name || "").replace(/^\s+|\s+$/g, "");
-            if (_isGenericFallbackCompName(aiName)) {
-                // AE sometimes reports the first comp as the active item after focus changes.
-                // Ignore stale generic fallback names and keep the last real composition instead.
-                return null;
-            }
-            _rememberActiveComp(ai);
+            _rememberActiveComp(ai, "activeItem");
             return ai;
         }
     } catch (e) {}
@@ -360,11 +339,8 @@ function findActiveComp() {
             // so we fall through; but we can check the viewer source:
             var src = viewer.source;
             if (src && _isComp(src)) {
-                var srcName = String(src.name || "").replace(/^\s+|\s+$/g, "");
-                if (!_isGenericFallbackCompName(srcName)) {
-                    _rememberActiveComp(src);
-                    return src;
-                }
+                _rememberActiveComp(src, "viewer");
+                return src;
             }
         }
     } catch (e) {}
@@ -375,11 +351,7 @@ function findActiveComp() {
         if (sel && sel.length > 0) {
             for (var s = 0; s < sel.length; s++) {
                 if (_isComp(sel[s])) {
-                    var selName = String(sel[s].name || "").replace(/^\s+|\s+$/g, "");
-                    if (_isGenericFallbackCompName(selName)) {
-                        continue;
-                    }
-                    _rememberActiveComp(sel[s]);
+                    _rememberActiveComp(sel[s], "selection");
                     return sel[s];
                 }
             }
@@ -399,7 +371,7 @@ function getProjectInfo() {
     }
 
     var projectName = "Unsaved Project";
-    var compName = "Comp 1";
+    var compName = "No composition selected";
 
     try {
         // Active Render Queue Item check
@@ -474,19 +446,26 @@ function getProjectInfo() {
         var hasCustom = rawCustom.length > 0;
 
         if (comp) {
-            _rememberActiveComp(comp);
+            _rememberActiveComp(comp, "found");
         }
 
         // Use remembered metadata rather than a transient generic active item.
         var compNameStr = (comp && comp.name) ? String(comp.name).replace(/^\s+|\s+$/g, "") : "";
-        var useSavedComp = comp && _savedCompName &&
-            !_isGenericFallbackCompName(_savedCompName) &&
-            _isGenericFallbackCompName(compNameStr);
-        // Also use saved if comp is null/undefined but we have a saved name
-        if (!comp && _savedCompName && !_isGenericFallbackCompName(_savedCompName)) {
+        if (!compNameStr || _isGenericFallbackCompName(compNameStr)) {
+            compNameStr = "";
+        }
+
+        var savedCompName = _savedCompName && !_isGenericFallbackCompName(_savedCompName) ? _savedCompName : "";
+        var useSavedComp = !!(comp && savedCompName && _isGenericFallbackCompName(compNameStr || ""));
+        if (!comp && savedCompName) {
             useSavedComp = true;
         }
-        var activeName = useSavedComp ? _savedCompName : (compNameStr || _savedCompName);
+
+        var activeName = useSavedComp ? savedCompName : (compNameStr || savedCompName);
+        if (!activeName || _isGenericFallbackCompName(activeName)) {
+            activeName = savedCompName || "No composition selected";
+        }
+
         var activeW = useSavedComp ? _savedCompWidth : (comp ? comp.width : _savedCompWidth);
         var activeH = useSavedComp ? _savedCompHeight : (comp ? comp.height : _savedCompHeight);
         var activeFps = useSavedComp ? _savedCompFps : (comp ? Math.round(comp.frameRate) : _savedCompFps);
