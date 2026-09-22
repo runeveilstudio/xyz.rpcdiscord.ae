@@ -505,6 +505,8 @@ function getProjectInfo() {
         var activeDur = useSavedComp ? _savedCompDuration : (comp ? comp.duration : _savedCompDuration);
 
         if (activeName && activeName.length > 0) {
+            // Preserve discovery if optional metadata inspection fails below.
+            compName = activeName;
             var parts = [];
 
             // Comp size and frame rate (e.g. 1080x1920 @ 60fps)
