@@ -335,8 +335,7 @@ function findActiveComp() {
                     return _cachedActiveComp;
                 }
             }
-            if (isGeneric) return null;
-            return ai;
+            if (!isGeneric) return ai;
         }
     } catch (e) {}
 
@@ -371,7 +370,7 @@ function findActiveComp() {
         var sel = app.project.selection;
         if (sel && sel.length > 0) {
             for (var s = 0; s < sel.length; s++) {
-                if (_isComp(sel[s])) {
+                if (_isComp(sel[s]) && !_isGenericFallbackCompName(String(sel[s].name || "").replace(/^\s+|\s+$/g, ""))) {
                     _rememberActiveComp(sel[s], "selection");
                     return sel[s];
                 }
@@ -379,9 +378,23 @@ function findActiveComp() {
         }
     } catch (e) {}
 
-    // NOTE: Removed "scan all project items" fallback — it always returned Comp 1
-    // (the first comp in the project), making the display stuck on that name.
-    // If we have saved metadata, return null and let the caller use _savedCompName.
+    // 5. Last resort: scan project items for the first real, non-generic comp
+    try {
+        if (app.project && app.project.numItems > 0) {
+            for (var n = 1; n <= app.project.numItems; n++) {
+                try {
+                    var candidate = app.project.item(n);
+                    if (!_isComp(candidate)) continue;
+                    var cName = String(candidate.name || "").replace(/^\s+|\s+$/g, "");
+                    if (!_isGenericFallbackCompName(cName)) {
+                        _rememberActiveComp(candidate, "scan");
+                        return candidate;
+                    }
+                } catch (e) {}
+            }
+        }
+    } catch (e) {}
+
     return null;
 }
 
