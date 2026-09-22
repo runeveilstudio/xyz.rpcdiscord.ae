@@ -324,7 +324,17 @@ function findActiveComp() {
     try {
         var ai = app.project.activeItem;
         if (ai && _isComp(ai)) {
+            var aiName = String(ai.name || "").replace(/^\s+|\s+$/g, "");
+            var isGeneric = _isGenericFallbackCompName(aiName);
             _rememberActiveComp(ai, "activeItem");
+            
+            // If activeItem is generic but we have a known good cached comp, return that instead
+            if (isGeneric && _cachedActiveComp && _isCompValid(_cachedActiveComp)) {
+                var cachedName = String(_cachedActiveComp.name || "").replace(/^\s+|\s+$/g, "");
+                if (!_isGenericFallbackCompName(cachedName)) {
+                    return _cachedActiveComp;
+                }
+            }
             return ai;
         }
     } catch (e) {}
@@ -344,6 +354,15 @@ function findActiveComp() {
             }
         }
     } catch (e) {}
+
+    // 3. Return cached comp if still valid (user switched away but comp still exists)
+    try {
+        if (_cachedActiveComp && _isCompValid(_cachedActiveComp)) {
+            return _cachedActiveComp;
+        }
+    } catch (e) {
+        _cachedActiveComp = null;
+    }
 
     // 4. Any selected comp in the project panel
     try {
@@ -451,16 +470,15 @@ function getProjectInfo() {
 
         // Use remembered metadata rather than a transient generic active item.
         var compNameStr = (comp && comp.name) ? String(comp.name).replace(/^\s+|\s+$/g, "") : "";
-        if (!compNameStr || _isGenericFallbackCompName(compNameStr)) {
-            compNameStr = "";
-        }
-
+        var compIsGeneric = _isGenericFallbackCompName(compNameStr || "");
+        
         var savedCompName = _savedCompName && !_isGenericFallbackCompName(_savedCompName) ? _savedCompName : "";
-        var useSavedComp = !!(comp && savedCompName && _isGenericFallbackCompName(compNameStr || ""));
-        if (!comp && savedCompName) {
-            useSavedComp = true;
-        }
-
+        
+        // Use saved comp if: 
+        // - current comp is generic and we have a saved non-generic name
+        // - no current comp but we have a saved non-generic name
+        var useSavedComp = (compIsGeneric || !comp) && savedCompName;
+        
         var activeName = useSavedComp ? savedCompName : (compNameStr || savedCompName);
         if (!activeName || _isGenericFallbackCompName(activeName)) {
             activeName = savedCompName || "No composition selected";
